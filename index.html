@@ -565,6 +565,64 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- Floor Mode Create/Rename Modal (iPad-safe: avoids prompt/confirm) -->
+<div id="modalFloor" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="floorModalTitle">
+    <div class="modal-header">
+      <div>
+        <div id="floorModalTitle" class="modal-title">Create</div>
+        <div id="floorModalSubtitle" class="muted" style="margin-top:4px;">Fill the details and tap Save.</div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button id="btnFloorModalClose" class="btn btn-outline small">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="floorModalSegment" class="panel" style="display:none;">
+        <div class="form-grid">
+          <div>
+            <label class="label">Aisle</label>
+            <input id="floorCreateAisle" class="input" placeholder="Aisle number/name">
+          </div>
+          <div>
+            <label class="label">Side</label>
+            <select id="floorCreateSide" class="input">
+              <option value="Left">Left</option>
+              <option value="Right">Right</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Layout Type</label>
+            <select id="floorCreateLayout" class="input">
+              <option value="Year-Round">Year-Round (Regular Set)</option>
+              <option value="Passover">Passover Only (Seasonal Set)</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Segment Name (optional)</label>
+            <input id="floorCreateSegName" class="input" placeholder="e.g., Kosher Wall Bay 2">
+          </div>
+        </div>
+      </div>
+
+      <div id="floorModalShelf" class="panel" style="display:none;">
+        <div class="form-grid">
+          <div class="wide">
+            <label class="label">Shelf Label</label>
+            <input id="floorCreateShelfLabel" class="input" placeholder="e.g., Shelf 1 (Top)">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; width:100%;">
+        <button id="btnFloorModalCancel" class="btn btn-outline">Cancel</button>
+        <button id="btnFloorModalSave" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Vendor Catalogs Modal -->
 <div id="modalVendor" class="modal-backdrop" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="vendorModalTitle">
@@ -968,41 +1026,51 @@ function setScreen(which){
   if(sf) sf.classList.toggle("active", which==="floor");
 }
 
+// iPad PWA note: window.prompt/confirm dialogs are unreliable in standalone mode.
+// Use an in-app modal for create/rename actions.
+let floorModalMode = null; // 'segment-create' | 'shelf-create' | 'shelf-rename'
+let floorModalContext = null;
+
+function openFloorModal(mode, ctx={}){
+  floorModalMode = mode;
+  floorModalContext = ctx;
+  el("modalFloor").setAttribute("aria-hidden","false");
+  el("modalFloor").style.display = "flex";
+  // panels
+  el("floorModalSegment").style.display = (mode==="segment-create") ? "block" : "none";
+  el("floorModalShelf").style.display   = (mode!=="segment-create") ? "block" : "none";
+
+  // titles
+  if(mode==="segment-create"){
+    el("floorModalTitle").textContent = "New Segment";
+    el("floorModalSubtitle").textContent = "Enter aisle/side and (optionally) a segment name.";
+    el("floorCreateAisle").value = ctx.aisle || "";
+    el("floorCreateSide").value = ctx.side || "Left";
+    el("floorCreateLayout").value = ctx.layoutType || "Year-Round";
+    el("floorCreateSegName").value = ctx.name || "";
+    setTimeout(()=>el("floorCreateAisle").focus(), 50);
+  } else if(mode==="shelf-create"){
+    el("floorModalTitle").textContent = "New Shelf";
+    el("floorModalSubtitle").textContent = "Enter a shelf label.";
+    el("floorCreateShelfLabel").value = "";
+    setTimeout(()=>el("floorCreateShelfLabel").focus(), 50);
+  } else if(mode==="shelf-rename"){
+    el("floorModalTitle").textContent = "Rename Shelf";
+    el("floorModalSubtitle").textContent = "Update the shelf label.";
+    el("floorCreateShelfLabel").value = ctx.label || "";
+    setTimeout(()=>el("floorCreateShelfLabel").focus(), 50);
+  }
+}
+
+function closeFloorModal(){
+  el("modalFloor").setAttribute("aria-hidden","true");
+  el("modalFloor").style.display = "none";
+  floorModalMode = null;
+  floorModalContext = null;
+}
+
 function createSegment(){
-  // Fixed values via dropdown-like prompt
-  const aisle = prompt("Aisle number/name:")?.trim();
-  if(!aisle) return;
-
-  let side = null;
-  // Use a simple confirm-based selection to avoid free text; still "fixed values"
-  // If you prefer a custom modal dropdown, say so and I'll swap this to a dialog UI.
-  const isLeft = confirm("Side selection:\nOK = Left\nCancel = Right");
-  side = isLeft ? "Left" : "Right";
-
-  const tags = (prompt("Tags (comma-separated):") || "").split(",").map(x=>x.trim()).filter(Boolean);
-  const notes = prompt("Segment notes (optional):") || "";
-  const name = (prompt("Segment name (optional):") || "").trim();
-  const isPassover = confirm("Layout Type:\nOK = Passover Only (Seasonal Set)\nCancel = Year-Round (Regular Set)");
-  const layoutType = isPassover ? "Passover" : "Year-Round";
-
-  const seg = {
-    id: uid("seg"),
-    name,
-    layoutType,
-    aisle,
-    side,
-    tags,
-    notes,
-    photo: null, // {dataUrl, scale, x, y}
-    shelves: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  state.segments.unshift(seg);
-  dbSave(state);
-  renderLibrary();
-  toast("Segment created");
-  showEditor(seg.id);
+  openFloorModal("segment-create", { aisle:"", side:"Left", layoutType:"Year-Round", name:"" });
 }
 
 function showEditor(segId){
@@ -1241,32 +1309,7 @@ function floorBulkPaste(){
 }
 
 async function floorNewSegment(){
-  const aisle = prompt("Aisle number/name:")?.trim();
-  if(!aisle) return;
-  const isLeft = confirm("Side selection:\nOK = Left\nCancel = Right");
-  const side = isLeft ? "Left" : "Right";
-  const name = (prompt("Segment name (optional):") || "").trim();
-  const isPassover = confirm("Layout Type:\nOK = Passover Only (Seasonal Set)\nCancel = Year-Round (Regular Set)");
-  const layoutType = isPassover ? "Passover" : "Year-Round";
-  const seg = {
-    id: uid("seg"),
-    name,
-    layoutType,
-    aisle,
-    side,
-    tags: [],
-    notes: "",
-    photo: null,
-    shelves: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  state.segments.unshift(seg);
-  dbSave(state);
-  renderLibrary();
-  renderFloorSegments();
-  selectFloorSegment(seg.id);
-  toast("Segment created");
+  openFloorModal("segment-create", { aisle:"", side:"Left", layoutType:"Year-Round", name:"" });
 }
 
 function floorSaveSegmentDetails(){
@@ -1285,32 +1328,14 @@ function floorSaveSegmentDetails(){
 
 function floorNewShelf(){
   if(!floorSegId){ toast("Select a segment first"); return; }
-  const seg = state.segments.find(s=>s.id===floorSegId);
-  const label = (prompt("Shelf label/name:") || "").trim();
-  if(!label) return;
-  const sh = { id: uid("shelf"), label, color:"Standard", notchValue:0, notchUnit:"inches", products: [] };
-  seg.shelves = seg.shelves || [];
-  seg.shelves.push(sh);
-  seg.updatedAt = new Date().toISOString();
-  dbSave(state);
-  floorShelfId = sh.id;
-  renderFloorShelves(seg.shelves);
-  renderFloorEntry();
-  toast("Shelf created");
+  openFloorModal("shelf-create", {});
 }
 
 function floorRenameShelf(){
   if(!ensureFloorReady()) return;
   const seg = state.segments.find(s=>s.id===floorSegId);
   const sh = (seg.shelves||[]).find(s=>s.id===floorShelfId);
-  const label = (prompt("New shelf label:", sh.label || "") || "").trim();
-  if(!label) return;
-  sh.label = label;
-  seg.updatedAt = new Date().toISOString();
-  dbSave(state);
-  renderFloorShelves(seg.shelves);
-  renderFloorEntry();
-  toast("Renamed");
+  openFloorModal("shelf-rename", { label: sh.label || "" });
 }
 
 function floorDeleteShelf(){
@@ -2909,6 +2934,90 @@ el("btnDiscardReturn").onclick = ()=>{
 };
 
 el("btnRemoveSegment").onclick = removeActiveSegment;
+
+// Floor create/rename modal wiring (iPad-safe)
+el("btnFloorModalClose").onclick = closeFloorModal;
+el("btnFloorModalCancel").onclick = closeFloorModal;
+el("modalFloor").addEventListener("click", (e)=>{
+  if(e.target && e.target.id==="modalFloor") closeFloorModal();
+});
+el("btnFloorModalSave").onclick = ()=>{
+  try{
+    if(floorModalMode==="segment-create"){
+      const aisle = (el("floorCreateAisle").value || "").trim();
+      if(!aisle){ toast("Aisle is required"); el("floorCreateAisle").focus(); return; }
+      const side = el("floorCreateSide").value || "Left";
+      const layoutType = el("floorCreateLayout").value || "Year-Round";
+      const name = (el("floorCreateSegName").value || "").trim();
+      const seg = {
+        id: uid("seg"),
+        name,
+        layoutType,
+        aisle,
+        side,
+        tags: [],
+        notes: "",
+        photo: null,
+        shelves: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      state.segments.unshift(seg);
+      dbSave(state);
+      closeFloorModal();
+      renderLibrary();
+      // If we're in Floor Mode, select it there; otherwise open editor.
+      if(el("screenFloor") && el("screenFloor").classList.contains("active")){
+        renderFloorSegments();
+        selectFloorSegment(seg.id);
+      } else {
+        showEditor(seg.id);
+      }
+      toast("Segment created");
+      return;
+    }
+
+    if(floorModalMode==="shelf-create"){
+      if(!floorSegId){ toast("Select a segment first"); return; }
+      const seg = state.segments.find(s=>s.id===floorSegId);
+      if(!seg){ toast("Select a segment first"); return; }
+      const label = (el("floorCreateShelfLabel").value || "").trim();
+      if(!label){ toast("Shelf label is required"); el("floorCreateShelfLabel").focus(); return; }
+      const sh = { id: uid("shelf"), label, color:"Standard", notchValue:0, notchUnit:"inches", products: [] };
+      seg.shelves = seg.shelves || [];
+      seg.shelves.push(sh);
+      seg.updatedAt = new Date().toISOString();
+      dbSave(state);
+      floorShelfId = sh.id;
+      closeFloorModal();
+      renderFloorShelves(seg.shelves);
+      renderFloorEntry();
+      renderLibrary();
+      toast("Shelf created");
+      return;
+    }
+
+    if(floorModalMode==="shelf-rename"){
+      if(!ensureFloorReady()) return;
+      const seg = state.segments.find(s=>s.id===floorSegId);
+      const sh = (seg.shelves||[]).find(s=>s.id===floorShelfId);
+      const label = (el("floorCreateShelfLabel").value || "").trim();
+      if(!label){ toast("Shelf label is required"); el("floorCreateShelfLabel").focus(); return; }
+      sh.label = label;
+      seg.updatedAt = new Date().toISOString();
+      dbSave(state);
+      closeFloorModal();
+      renderFloorShelves(seg.shelves);
+      renderFloorEntry();
+      renderLibrary();
+      toast("Renamed");
+      return;
+    }
+  }catch(err){
+    console.error(err);
+    toast("Could not save. Please try again.");
+  }
+};
 
 el("btnPrintSegment").onclick = printSegment;
 el("btnPrintShelfReport").onclick = printShelfReport;
