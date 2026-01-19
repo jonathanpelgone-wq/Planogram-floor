@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#FBD300" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>Planogram Builder V2 + PDF (No Admin)</title>
+  <style>
+    :root{
+      --nf-yellow:#FBD300;
+      --nf-black:#111;
+      --bg:#ffffff;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --danger:#dc2626;
+      --shadow: 0 10px 26px rgba(0,0,0,.06);
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#fafafa; color:var(--nf-black); }
+    header{
+      position:sticky; top:0; z-index:10;
+      background:#fff; border-bottom:1px solid var(--border);
+      padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .brand{ display:flex; align-items:center; gap:10px; }
+    .badge{ width:40px;height:40px;border-radius:14px; background:var(--nf-yellow); display:grid; place-items:center; font-weight:900; }
+    .title{ font-weight:900; }
+    .subtitle{ color:var(--muted); font-size:12px; margin-top:2px;}
+    .btn{
+      border:1px solid transparent; background:#111; color:#fff;
+      padding:10px 12px; border-radius:12px; font-weight:800; font-size:13px; cursor:pointer;
+    }
+    .btn:hover{ filter:brightness(.98); }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    .btn-primary{ background:var(--nf-yellow); color:var(--nf-black); border-color:rgba(0,0,0,.12); }
+    .btn-outline{ background:#fff; color:var(--nf-black); border-color:var(--border); }
+    .btn-danger{ background:var(--danger); }
+    .btn.small{ padding:8px 10px; font-size:12px; border-radius:10px; }
+    .top-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .layout{ display:grid; grid-template-columns: 330px 1fr; height: calc(100vh - 70px); }
+    aside{
+      background:#fff; border-right:1px solid var(--border);
+      padding:14px; overflow:auto;
+    }
+    main{ padding:16px; overflow:auto; }
+    .input{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border); background:#fff; font-size:13px;
+    }
+    .filters{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin:10px 0 12px; }
+    .segment-list{ display:flex; flex-direction:column; gap:10px; }
+    .seg-item{
+      border:1px solid var(--border); border-radius:16px; padding:12px;
+      display:grid; grid-template-columns: 70px 1fr; gap:10px;
+      cursor:pointer;
+    }
+    .seg-item:hover{ box-shadow:var(--shadow); }
+    .thumb{
+      width:70px;height:70px;border-radius:12px;border:1px solid var(--border);
+      background:#f3f4f6; overflow:hidden; display:grid; place-items:center;
+    }
+    .thumb img{ width:100%;height:100%;object-fit:cover; }
+    .seg-title{ font-weight:900; }
+    .seg-meta{ color:var(--muted); font-size:12px; margin-top:4px; }
+
+    .screen{ display:none; }
+    .screen.active{ display:block; }
+
+    .grid{ display:grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap:12px; }
+    .card{ border:1px solid var(--border); border-radius:18px; background:#fff; overflow:hidden; }
+    .card-head{ height:120px; background:#f3f4f6; }
+    .card-head img{ width:100%; height:100%; object-fit:cover; }
+    .card-body{ padding:12px; }
+    .card-title{ font-weight:900; }
+    .card-sub{ color:var(--muted); font-size:12px; margin-top:4px; }
+
+    /* Editor */
+    .editor-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+    .editor-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .editor-grid{ display:grid; grid-template-columns: 330px 1fr 420px; gap:12px; }
+    .panel{ border:1px solid var(--border); border-radius:18px; background:#fff; padding:12px; margin-bottom:12px; }
+    .panel-title{ font-weight:900; margin-bottom:10px; }
+    .panel-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .label{ display:block; font-size:12px; font-weight:900; margin-bottom:6px; }
+    textarea.input{ min-height:84px; resize:vertical; }
+
+    .photo-panel{ border:1px solid var(--border); border-radius:18px; background:#fff; padding:12px; }
+    .photo-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .filebtn input{ display:none; }
+    .photo-frame{
+      width:100%;
+      aspect-ratio: 4 / 3; /* V2 on-screen: landscape */
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:#f3f4f6;
+      overflow:hidden;
+      position:relative;
+      display:grid;
+      place-items:center;
+    }
+    .photo-frame img{
+      position:absolute; left:0; top:0;
+      transform-origin: top left;
+      user-select:none;
+      cursor:grab;
+      max-width:none;
+      max-height:none;
+      display:none;
+    }
+    .photo-placeholder{ color:var(--muted); font-size:12px; text-align:center; padding:16px; }
+    .photo-tools{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+
+    .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .wide{ grid-column: 1 / -1; }
+
+    .shelf-list{ display:flex; flex-direction:column; gap:10px; }
+    .shelf{ border:1px solid var(--border); border-radius:16px; padding:10px; }
+    .shelf-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .shelf-title{ font-weight:900; }
+    .badge-pill{ font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#fff; }
+    .dot{ width:10px;height:10px;border-radius:999px; display:inline-block; margin-right:6px; vertical-align:middle; }
+    .dot-grey{ background:#9ca3af; } .dot-yellow{ background:var(--nf-yellow); } .dot-red{ background:#ef4444; }
+
+    .shelf-row{ display:grid; grid-template-columns: 1fr 140px; gap:8px; margin-top:8px; }
+    .shelf-controls{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+
+    .product-list{ display:flex; flex-direction:column; gap:8px; margin-top:10px; max-height: calc(100vh - 310px); overflow:auto; padding-right:4px; }
+    .product{ border:1px solid var(--border); border-radius:14px; padding:10px; background:#fff; }
+    .product-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .product-title{ font-weight:900; font-size:13px; }
+    .product-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+    .printbar{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+
+    .toast{
+      position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+      background:#111; color:#fff; padding:10px 12px; border-radius:12px;
+      display:none; z-index:200; font-weight:800; font-size:13px;
+    }
+
+    /* PRINT/PDF
+       - Default paper: LEGAL (portrait)
+       - Standard pages: photo panel is ~1/3 page width on the left
+       - First page: cover with full-size photo + headers
+    */
+    @page:first { size: Legal portrait; margin: 0.4in; }
+    @page { size: Legal landscape; margin: 0.4in; }
+    @media print{
+      header, aside, .editor-actions, .photo-tools, .printbar, .top-actions, .btn { display:none !important; }
+      body{ background:#fff; }
+      .layout{ display:block; height:auto; }
+      main{ padding:0; overflow:visible; }
+      .screen{ display:none !important; }
+      #printRoot{ display:block !important; }
+    }
+
+    #printRoot{ display:none; }
+    .print-page{
+      /* Standard pages (landscape) */
+      width: 14in; height: 8.5in;
+      page-break-after: always;
+      padding:0; /* handled by @page margin */
+    }
+    
+    .print-page-cover{
+      /* Cover page box in portrait */
+      width: 8.5in; height: 14in;
+    }
+.print-header{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      border-bottom:3px solid var(--nf-yellow);
+      padding-bottom:8px;
+      margin-bottom:10px;
+    }
+    .print-brand{ display:flex; gap:10px; align-items:center; }
+    .print-badge{ width:38px;height:38px;border-radius:12px; background:var(--nf-yellow); display:grid; place-items:center; font-weight:900; }
+    .print-title{ font-weight:900; }
+    .print-sub{ font-size:11px; color:#333; margin-top:2px; }
+    .print-meta{ text-align:right; font-size:11px; color:#111; }
+
+    .print-body{
+      display:grid;
+      /* Standard pages: photo takes ~1/3 of page width */
+      grid-template-columns: 2.7in 1fr;
+      gap:0.25in;
+      height: calc(8.5in - 1.35in);
+    }
+
+    .print-body-report{
+      height: calc(8.5in - 1.35in);
+    }
+
+    .print-cover-body{
+      /* Cover is portrait */
+      height: calc(14in - 1.35in);
+    }
+    .print-cover-photo{
+      height: 100%;
+      width: 100%;
+      border:1px solid #000;
+      border-radius:10px;
+      overflow:hidden;
+      background:#f3f4f6;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .print-cover-photo img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      background:#f3f4f6;
+    }
+    .print-photo{
+      height: 100%;
+      border:1px solid #000;
+      border-radius:10px;
+      overflow:hidden;
+      background:#f3f4f6;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .print-photo img{
+      width:100%;
+      height:100%;
+      object-fit:contain; /* FIT mode, portrait photo fills height if tall */
+      background:#f3f4f6;
+    }
+
+    .print-right{
+      height:100%;
+      border:1px solid #000;
+      border-radius:10px;
+      overflow:hidden;
+    }
+    .print-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:11px;
+    }
+    .print-table thead th{
+      background:#111; color:var(--nf-yellow);
+      padding:7px; text-align:left;
+      border-bottom:1px solid #000;
+    }
+    .print-table td{
+      border-top:1px solid #ddd;
+      padding:6px 7px;
+      vertical-align:top;
+    }
+    .shelf-header-row{
+      background:#f9fafb;
+      font-weight:900;
+    }
+    .shelf-header-row .sub{
+      font-weight:700;
+      color:#111;
+    }
+
+    .anno{
+      margin-top:3px;
+      font-size:10px;
+      color:#111;
+    }
+    .anno .tag{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid #111;
+      font-weight:900;
+      margin-right:6px;
+    }
+    .anno .muted2{ color:#374151; font-weight:700; }
+
+    /* Modal */
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:50; padding:16px; }
+    .modal-backdrop.active{ display:flex; }
+    .modal{ width:min(980px, 100%); background:#fff; border-radius:20px; border:1px solid var(--border); box-shadow:var(--shadow); }
+    .modal-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border); }
+    .modal-title{ font-weight:900; }
+    .modal-body{ padding:14px 16px; max-height:70vh; overflow:auto; }
+    .modal-footer{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; border-top:1px solid var(--border); }
+    .kv{ display:grid; grid-template-columns: 200px 1fr; gap:8px; align-items:center; margin-bottom:10px; }
+    .table{ width:100%; border-collapse:collapse; font-size:13px; }
+    .table th,.table td{ border-bottom:1px solid var(--border); padding:8px 6px; text-align:left; vertical-align:top; }
+    .table th{ font-weight:900; font-size:12px; color:#111; }
+    .pill{ display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#fff; font-size:11px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="badge">NF</div>
+    <div>
+      <div class="title">Planogram Builder</div>
+      <div class="subtitle">V2 + PDF • No Admin • Offline</div>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="btnFloorMode" class="btn btn-outline">Floor Mode</button>
+    <button id="btnVendorCatalogs" class="btn btn-outline">Vendor Catalogs</button>
+    <button id="btnExportLibrary" class="btn btn-outline">Export Library</button>
+    <label class="btn btn-outline filebtn">
+      Import Library
+      <input id="fileImportLibrary" type="file" accept=".json" hidden>
+    </label>
+    <button id="btnExportCapture" class="btn btn-outline">Export Capture</button>
+    <label class="btn btn-outline filebtn" id="wrapImportCapture" style="display:none;">
+      Import & Merge
+      <input id="fileImportCapture" type="file" accept=".json" hidden>
+    </label>
+  </div>
+</header>
+
+<div class="layout">
+  <aside>
+    <button id="btnNewSegment" class="btn btn-primary" style="width:100%;">+ New Segment</button>
+
+    <div style="margin-top:12px;">
+      <input id="globalSearch" class="input" placeholder="Search UPC, description, supplier, aisle, tags…">
+      <div class="filters">
+        <select id="filterAisle" class="input"><option value="">All Aisles</option></select>
+        <select id="filterSide" class="input">
+          <option value="">All Sides</option>
+          <option value="Left">Left</option>
+          <option value="Right">Right</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="segmentList" class="segment-list"></div>
+  </aside>
+
+  <main>
+    <div id="screenLibrary" class="screen active">
+      <div style="margin-bottom:12px;">
+        <h2 style="margin:0;">Library</h2>
+        <div class="muted">Select a segment to edit. All editing is enabled.</div>
+      </div>
+
+      <div id="libraryEmpty" class="panel" style="text-align:center;">
+        <div style="font-weight:900; font-size:16px;">No segments yet</div>
+        <div class="muted" style="margin-top:6px;">Click <b>+ New Segment</b> to begin.</div>
+      </div>
+
+      <div id="libraryGrid" class="grid"></div>
+    </div>
+
+    <div id="screenEditor" class="screen">
+      <div class="editor-top">
+        <div>
+          <h2 id="editorTitle" style="margin:0;">Segment</h2>
+          <div id="editorMeta" class="muted"></div>
+        </div>
+        <div class="editor-actions">
+          <button id="btnFillMissingCatalogs" class="btn btn-outline">Fill Missing Descriptions (Excel)</button>
+          <button id="btnFillMissingCatalogsAll" class="btn btn-outline">Fill Missing (All Segments)</button>
+          <button id="btnSaveContinue" class="btn btn-outline">Save & Continue</button>
+          <button id="btnSaveReturn" class="btn btn-primary">Save & Return</button>
+          <button id="btnDiscardReturn" class="btn btn-danger">Discard & Return</button>
+          <button id="btnRemoveSegment" class="btn btn-outline" style="border-color: rgba(220,38,38,.35); color: var(--danger);">Remove Segment</button>
+        </div>
+      </div>
+
+      <div class="editor-grid">
+        <div class="photo-panel">
+          <div class="photo-header">
+            <div style="font-weight:900;">Segment Photo (Editor)</div>
+            <label class="btn btn-outline filebtn">
+              Upload Photo
+              <input id="filePhoto" type="file" accept="image/*" hidden>
+            </label>
+          </div>
+
+          <div class="photo-frame" id="photoFrame">
+            <div class="photo-placeholder" id="photoPlaceholder">Upload shelf segment photo</div>
+            <img id="photoImg" alt="Segment photo">
+          </div>
+
+          <div class="photo-tools">
+            <button id="btnFit" class="btn btn-outline small">Fit</button>
+            <button id="btnZoomIn" class="btn btn-outline small">Zoom +</button>
+            <button id="btnZoomOut" class="btn btn-outline small">Zoom −</button>
+            <button id="btnResetPhoto" class="btn btn-outline small">Reset</button>
+          </div>
+
+          <div class="muted" style="margin-top:8px;">
+            Drag photo to reposition. Print/PDF uses a full-height portrait panel on the left.
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <div class="panel-title">Segment Details</div>
+            <div class="form-grid">
+              <div class="wide">
+                <label class="label">Segment Name (optional)</label>
+                <input id="inpSegName" class="input" placeholder="e.g. Kosher A — Seasonal">
+              </div>
+              <div>
+                <label class="label">Aisle</label>
+                <input id="inpAisle" class="input" placeholder="e.g. 5">
+              </div>
+              <div>
+                <label class="label">Side</label>
+                <select id="inpSide" class="input">
+                  <option value="">Select…</option>
+                  <option value="Left">Left</option>
+                  <option value="Right">Right</option>
+                </select>
+              </div>
+              <div class="wide">
+                <label class="label">Layout Type</label>
+                <select id="inpLayoutType" class="input">
+                  <option value="Year-Round">Year-Round (Regular Set)</option>
+                  <option value="Passover">Passover Only (Seasonal Set)</option>
+                </select>
+              </div>
+              <div class="wide">
+                <label class="label">Tags (comma-separated)</label>
+                <input id="inpTags" class="input" placeholder="e.g. Snacks, Core, Promo">
+              </div>
+              <div class="wide">
+                <label class="label">Segment Notes</label>
+                <textarea id="inpNotes" class="input" placeholder="Internal notes (optional)"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-row">
+              <div class="panel-title" style="margin:0;">Shelves</div>
+              <button id="btnAddShelf" class="btn btn-primary">+ Add Shelf</button>
+            </div>
+            <div id="shelfList" class="shelf-list"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-row">
+            <div>
+              <div class="panel-title" style="margin:0;">Products</div>
+              <div id="productsHint" class="muted">Select a shelf to manage products.</div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button id="btnAddProduct" class="btn btn-primary" disabled>+ Add Product</button>
+              <button id="btnBulkAdd" class="btn btn-outline" disabled>Bulk Add UPCs</button>
+            </div>
+          </div>
+          <div id="productList" class="product-list"></div>
+        </div>
+      </div>
+
+      <div class="printbar">
+        <button id="btnPrintSegment" class="btn btn-outline">Print / Save as PDF</button>
+        <button id="btnPrintShelfReport" class="btn btn-outline">Print Shelf Report</button>
+        <button id="btnToggleAnnotate" class="btn btn-primary">Auto-Annotate: Off</button>
+        <button id="btnExportCSV" class="btn btn-outline">Export Segment CSV</button>
+      </div>
+    </div>
+
+    <!-- iPad / Floor Capture Mode (fast UPC + facings + photo) -->
+    <div id="screenFloor" class="screen">
+      <div class="panel">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;">
+          <div>
+            <h2 style="margin:0;">Floor Capture</h2>
+            <div class="muted">Fast entry mode for the sales floor (UPC + facings only). Create new segments/shelves and add a photo.</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btnFloorBack" class="btn btn-outline">Back to Library</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="form-grid">
+          <div class="wide">
+            <label class="label">Select Segment</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <select id="floorSegSelect" class="input" style="flex:1; min-width:260px;"></select>
+              <button id="btnFloorNewSegment" class="btn btn-primary">+ New Segment</button>
+            </div>
+            <div id="floorSegMeta" class="muted" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <label class="label">Layout Type</label>
+            <select id="floorLayoutType" class="input">
+              <option value="Year-Round">Year-Round (Regular Set)</option>
+              <option value="Passover">Passover Only (Seasonal Set)</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Segment Name (optional)</label>
+            <input id="floorSegName" class="input" placeholder="e.g., Passover Cookies — Bay 2">
+          </div>
+          <div class="wide">
+            <label class="label">Segment Photo</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <label class="btn btn-outline filebtn">
+                Add / Update Photo
+                <input id="floorPhoto" type="file" accept="image/*" capture="environment" hidden>
+              </label>
+              <button id="btnFloorClearPhoto" class="btn btn-outline">Remove Photo</button>
+              <div class="muted">Tip: Use iPad camera for a quick shelf photo.</div>
+            </div>
+            <div style="margin-top:10px; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:#f3f4f6;">
+              <img id="floorPhotoPreview" alt="" style="width:100%; max-height:260px; object-fit:cover; display:none;">
+              <div id="floorPhotoPlaceholder" class="photo-placeholder">No photo yet.</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap;">
+          <button id="btnFloorSaveSegment" class="btn btn-outline">Save Segment Details</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-row">
+          <div>
+            <div class="panel-title" style="margin:0;">Shelves</div>
+            <div class="muted">Create shelves on the fly. Assign UPCs to a shelf.</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btnFloorNewShelf" class="btn btn-primary">+ New Shelf</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+          <div style="flex:1; min-width:240px;">
+            <label class="label">Select Shelf</label>
+            <select id="floorShelfSelect" class="input"></select>
+          </div>
+          <button id="btnFloorRenameShelf" class="btn btn-outline">Rename Shelf</button>
+          <button id="btnFloorDeleteShelf" class="btn btn-outline" style="border-color: rgba(220,38,38,.35); color: var(--danger);">Delete Shelf</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-row">
+          <div>
+            <div class="panel-title" style="margin:0;">Quick Entry (UPC + Facings)</div>
+            <div class="muted">Paste a list of UPCs (one per line) or add rows manually. Descriptions/vendors are completed later on Windows.</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btnFloorAddRow" class="btn btn-primary">+ Add Row</button>
+            <button id="btnFloorBulkPaste" class="btn btn-outline">Bulk Paste UPCs</button>
+          </div>
+        </div>
+        <div id="floorEntryHint" class="muted" style="margin-bottom:10px;">Select a segment and shelf to start.</div>
+        <div id="floorEntryTable" style="overflow:auto;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap;">
+          <button id="btnFloorExportCapture" class="btn btn-primary">Export Capture (JSON)</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="printRoot"></div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Vendor Catalogs Modal -->
+<div id="modalVendor" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="vendorModalTitle">
+    <div class="modal-header">
+      <div>
+        <div id="vendorModalTitle" class="modal-title">Vendor Catalogs (Excel)</div>
+        <div class="muted" style="margin-top:4px;">Import one or more vendor item lists. The app can fill missing descriptions offline from these files.</div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <label class="btn btn-outline filebtn small" title="Add vendor Excel files">
+          + Add Files
+          <input id="fileVendorCatalogs" type="file" accept=".xlsx,.xls,.csv" multiple hidden>
+        </label>
+        <button id="btnVendorClose" class="btn btn-outline small">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="vendorStatus" class="panel" style="display:none;"></div>
+
+      <div class="panel">
+        <div class="panel-title">Loaded Catalogs</div>
+        <div class="muted" style="margin-bottom:10px;">Tip: Once loaded, UPC lookups are instant. The app remembers your catalogs on this device.</div>
+        <table class="table" aria-label="Loaded vendor catalogs">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>File</th>
+              <th>Rows</th>
+              <th>UPC Column</th>
+              <th>Description Column</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vendorCatalogTable"></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div id="vendorConflicts"></div>
+      </div>
+
+      <div id="vendorMapPanel" class="panel" style="display:none;">
+        <div class="panel-title">Map Columns</div>
+        <div class="muted" style="margin-bottom:10px;">Select which columns contain UPC and Description for this vendor file. Vendor defaults to the file name.</div>
+        <div class="form-grid">
+          <div>
+            <label class="label">Vendor name</label>
+            <input id="vendorMapName" class="input" placeholder="Vendor name">
+          </div>
+          <div>
+            <label class="label">Sheet (if Excel)</label>
+            <select id="vendorMapSheet" class="input"></select>
+          </div>
+          <div>
+            <label class="label">UPC column</label>
+            <select id="vendorMapUpc" class="input"></select>
+          </div>
+          <div>
+            <label class="label">Description column</label>
+            <select id="vendorMapDesc" class="input"></select>
+          </div>
+          <div class="wide">
+            <div class="muted" style="margin-bottom:6px;">Preview (first 8 rows)</div>
+            <div id="vendorMapPreview" style="overflow:auto; border:1px solid var(--border); border-radius:14px;"></div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+          <button id="btnVendorMapCancel" class="btn btn-outline">Cancel</button>
+          <button id="btnVendorMapSave" class="btn btn-primary">Index Catalog</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="muted">Offline note: Excel support requires the XLSX library. Open the app once while online so it can be cached for offline use.</div>
+      <div style="display:flex; gap:8px;">
+        <button id="btnVendorClearAll" class="btn btn-danger small">Clear All Catalogs</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- XLSX (Excel) support - cached for offline via service worker once loaded online -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+/* =======================
+   Minimal offline storage
+   ======================= */
+const KEY = "NF_PLANOGRAM_V2_PDF_NOADMIN";
+function safeParse(s, fallback){ try{return JSON.parse(s)}catch{return fallback} }
+function dbLoad(){
+  return safeParse(localStorage.getItem(KEY), {
+    schema: 3,
+    settings: { storeName: "John & Danielle’s No Frills", autoAnnotate: false },
+    segments: [],
+    autosaveDraft: null
+  });
+}
+function dbSave(state){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>t.style.display="none", 1600);
+}
+function uid(prefix="id"){ return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`; }
+function downloadText(filename, text, mime="application/json"){
+  const blob = new Blob([text], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function readFileAsDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+
+/* =======================
+   Service worker (offline caching)
+   - Caches the XLSX library once you open the app while online
+   ======================= */
+if(typeof navigator !== "undefined" && "serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  });
+}
+
+/* =======================
+   Vendor Catalogs (Excel / CSV)
+   - Multiple files supported
+   - Auto-assigns supplier/vendor based on which catalog matched
+   - Offline-first: all parsing + lookups run locally once catalogs are indexed
+   ======================= */
+const VENDOR_DB_NAME = "NF_PLANOGRAM_VENDOR_CATALOGS";
+const VENDOR_DB_VERSION = 1;
+const VENDOR_CONFLICTS_KEY = "NF_VENDOR_CONFLICTS";
+
+function normalizeUPC(v){
+  const s = String(v ?? "").trim();
+  const digits = s.replace(/\D/g, "");
+  return digits;
+}
+
+function openVendorDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(VENDOR_DB_NAME, VENDOR_DB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if(!db.objectStoreNames.contains("catalogs")){
+        db.createObjectStore("catalogs", { keyPath: "id" });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+async function vendorDBGetAll(){
+  const db = await openVendorDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("catalogs", "readonly");
+    const st = tx.objectStore("catalogs");
+    const req = st.getAll();
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+
+async function vendorDBPut(catalog){
+  const db = await openVendorDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("catalogs", "readwrite");
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+    tx.objectStore("catalogs").put(catalog);
+  });
+}
+
+async function vendorDBDelete(id){
+  const db = await openVendorDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("catalogs", "readwrite");
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+    tx.objectStore("catalogs").delete(id);
+  });
+}
+
+async function vendorDBClear(){
+  const db = await openVendorDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("catalogs", "readwrite");
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+    tx.objectStore("catalogs").clear();
+  });
+}
+
+let vendorCatalogs = [];
+let vendorIndex = new Map(); // upc -> [{catalogId, vendorName, description}]
+
+function rebuildVendorIndex(){
+  vendorIndex = new Map();
+  for(const cat of vendorCatalogs){
+    const map = cat.upcToDesc || {};
+    for(const upc of Object.keys(map)){
+      const arr = vendorIndex.get(upc) || [];
+      arr.push({ catalogId: cat.id, vendorName: cat.vendorName, description: map[upc] });
+      vendorIndex.set(upc, arr);
+    }
+  }
+}
+
+function loadVendorConflicts(){
+  return safeParse(localStorage.getItem(VENDOR_CONFLICTS_KEY), []);
+}
+function saveVendorConflicts(list){
+  localStorage.setItem(VENDOR_CONFLICTS_KEY, JSON.stringify(list || []));
+}
+
+/* =======================
+   Optional UPC lookup (online)
+   - Uses Open Food Facts public API (no key)
+   - Fails gracefully when offline / not found
+   ======================= */
+async function lookupUPC(upcRaw){
+  const upc = String(upcRaw||"").trim().replace(/\D/g, "");
+  if(!upc) return null;
+  if(typeof navigator !== "undefined" && navigator.onLine === false){
+    toast("Offline — UPC lookup skipped");
+    return null;
+  }
+
+  // Open Food Facts API (works for many grocery UPC/GTIN codes)
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(upc)}.json`;
+  try{
+    const res = await fetch(url, { method:"GET", headers:{"Accept":"application/json"} });
+    if(!res.ok) return null;
+    const data = await res.json();
+    if(!data || data.status !== 1 || !data.product) return null;
+    const p = data.product;
+    const name = (p.product_name || p.product_name_en || p.generic_name || "").trim();
+    const brand = (p.brands || "").split(",")[0]?.trim() || "";
+    const qty = (p.quantity || "").trim();
+
+    // Build a practical shelf label style description
+    const parts = [brand, name, qty].filter(Boolean);
+    const description = parts.join(" ").replace(/\s+/g, " ").trim();
+    const imageUrl = (p.image_front_url || p.image_url || "").trim();
+    return { upc, description, brand, qty, imageUrl };
+  }catch(e){
+    // Network/CORS/offline/etc.
+    return null;
+  }
+}
+
+async function maybeAutofillDescriptionFromUPC({ upc, currentDescription="" }){
+  const cleanedUPC = String(upc||"").trim();
+  if(!cleanedUPC) return { description: String(currentDescription||"").trim(), lookedUp:false };
+
+  // Only prompt to look up if description is blank (keeps it fast & non-intrusive)
+  if(String(currentDescription||"").trim()){
+    return { description: String(currentDescription||"").trim(), lookedUp:false };
+  }
+
+  const ok = confirm("Look up this UPC online to auto-fill the description?\n\n(Requires internet. If not found, you can type it manually.)");
+  if(!ok) return { description: "", lookedUp:false };
+
+  toast("Looking up UPC…");
+  const hit = await lookupUPC(cleanedUPC);
+  if(hit?.description){
+    toast("UPC found — description filled");
+    return { description: hit.description, lookedUp:true, hit };
+  }
+  toast("UPC not found — enter description manually");
+  return { description: "", lookedUp:true };
+}
+
+/* =======================
+   App State
+   ======================= */
+let state = dbLoad();
+let activeSegId = null;
+let activeShelfId = null;
+let working = null;
+
+// Photo transform for editor preview (landscape frame)
+let photoT = { scale: 1, x: 0, y: 0, dragging:false, sx:0, sy:0, ox:0, oy:0 };
+
+const el = (id)=>document.getElementById(id);
+
+// iPad detection (iPadOS can report as "Macintosh" with touch points)
+const IS_IPAD = (()=>{
+  try{
+    const ua = navigator.userAgent || "";
+    const isIpadUA = /iPad/i.test(ua);
+    const isIpadOS = (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+    return isIpadUA || isIpadOS;
+  }catch{ return false; }
+})();
+
+// Toggle visibility of Windows-only controls
+try{
+  const wrap = el("wrapImportCapture");
+  if(wrap) wrap.style.display = IS_IPAD ? "none" : "inline-flex";
+}catch(e){ /* ignore */ }
+
+function segmentThumb(seg){
+  if(seg.photo?.dataUrl) return `<img src="${seg.photo.dataUrl}" alt="thumb">`;
+  return `<div class="muted">No Photo</div>`;
+}
+
+function applyFilters(segs){
+  const q = el("globalSearch").value.trim().toLowerCase();
+  const aisle = el("filterAisle").value;
+  const side = el("filterSide").value;
+
+  return segs.filter(s=>{
+    if(aisle && String(s.aisle||"") !== aisle) return false;
+    if(side && String(s.side||"") !== side) return false;
+    if(!q) return true;
+    const hay = [
+      s.aisle, s.side, (s.tags||[]).join(" "), s.notes,
+      (s.shelves||[]).flatMap(sh=>sh.products||[]).map(p=>`${p.upc} ${p.description} ${p.supplier}`).join(" ")
+    ].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+function refreshAisleFilter(){
+  const sel = el("filterAisle");
+  const current = sel.value;
+  const aisles = [...new Set(state.segments.map(s=>String(s.aisle||"")).filter(Boolean))].sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+  sel.innerHTML = `<option value="">All Aisles</option>` + aisles.map(a=>`<option value="${a}">${a}</option>`).join("");
+  sel.value = current || "";
+}
+
+function renderSidebar(){
+  const list = el("segmentList");
+  list.innerHTML = "";
+  const filtered = applyFilters(state.segments);
+
+  filtered.forEach(seg=>{
+    const div = document.createElement("div");
+    div.className="seg-item";
+    div.innerHTML = `
+      <div class="thumb">${segmentThumb(seg)}</div>
+      <div>
+        <div class="seg-title">${(seg.name||"").trim() ? `${seg.name}` : `Aisle ${seg.aisle || "?"} • ${seg.side || "?"}`}</div>
+        <div class="seg-meta">Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • <b>${seg.layoutType || "Year-Round"}</b></div>
+        <div class="seg-meta">${(seg.tags||[]).slice(0,4).join(", ") || "No tags"} • shelves: ${(seg.shelves||[]).length}</div>
+        <div class="seg-meta">Updated: ${seg.updatedAt ? new Date(seg.updatedAt).toLocaleString() : "—"}</div>
+      </div>
+    `;
+    div.onclick = ()=>showEditor(seg.id);
+    list.appendChild(div);
+  });
+}
+
+function renderGrid(){
+  const grid = el("libraryGrid");
+  const empty = el("libraryEmpty");
+  const filtered = applyFilters(state.segments);
+
+  empty.style.display = filtered.length ? "none" : "block";
+  grid.innerHTML = "";
+
+  filtered.forEach(seg=>{
+    const card = document.createElement("div");
+    card.className="card";
+    card.innerHTML = `
+      <div class="card-head">${seg.photo?.dataUrl ? `<img src="${seg.photo.dataUrl}">` : ""}</div>
+      <div class="card-body">
+        <div class="card-title">${(seg.name||"").trim() ? seg.name : `Aisle ${seg.aisle || "?"} • ${seg.side || "?"}`}</div>
+        <div class="card-sub">Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • <b>${seg.layoutType || "Year-Round"}</b></div>
+        <div class="card-sub">${(seg.tags||[]).join(", ") || "No tags"} • ${seg.shelves?.length || 0} shelves</div>
+      </div>
+    `;
+    card.onclick = ()=>showEditor(seg.id);
+    grid.appendChild(card);
+  });
+}
+
+function renderLibrary(){
+  refreshAisleFilter();
+  renderSidebar();
+  renderGrid();
+}
+
+function setScreen(which){
+  el("screenLibrary").classList.toggle("active", which==="library");
+  el("screenEditor").classList.toggle("active", which==="editor");
+  const sf = document.getElementById("screenFloor");
+  if(sf) sf.classList.toggle("active", which==="floor");
+}
+
+function createSegment(){
+  // Fixed values via dropdown-like prompt
+  const aisle = prompt("Aisle number/name:")?.trim();
+  if(!aisle) return;
+
+  let side = null;
+  // Use a simple confirm-based selection to avoid free text; still "fixed values"
+  // If you prefer a custom modal dropdown, say so and I'll swap this to a dialog UI.
+  const isLeft = confirm("Side selection:\nOK = Left\nCancel = Right");
+  side = isLeft ? "Left" : "Right";
+
+  const tags = (prompt("Tags (comma-separated):") || "").split(",").map(x=>x.trim()).filter(Boolean);
+  const notes = prompt("Segment notes (optional):") || "";
+  const name = (prompt("Segment name (optional):") || "").trim();
+  const isPassover = confirm("Layout Type:\nOK = Passover Only (Seasonal Set)\nCancel = Year-Round (Regular Set)");
+  const layoutType = isPassover ? "Passover" : "Year-Round";
+
+  const seg = {
+    id: uid("seg"),
+    name,
+    layoutType,
+    aisle,
+    side,
+    tags,
+    notes,
+    photo: null, // {dataUrl, scale, x, y}
+    shelves: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  state.segments.unshift(seg);
+  dbSave(state);
+  renderLibrary();
+  toast("Segment created");
+  showEditor(seg.id);
+}
+
+function showEditor(segId){
+  const seg = state.segments.find(s=>s.id===segId);
+  if(!seg) return;
+
+  activeSegId = segId;
+  activeShelfId = null;
+  working = structuredClone(seg);
+
+  setScreen("editor");
+
+  el("editorTitle").textContent = `Aisle ${working.aisle || "?"} • ${working.side || "?"} — Segment`;
+  el("editorMeta").textContent  = `ID: ${working.id} • Updated: ${working.updatedAt ? new Date(working.updatedAt).toLocaleString() : "—"}`;
+
+  el("inpAisle").value = working.aisle || "";
+  el("inpSide").value  = working.side || "";
+  el("inpSegName").value = working.name || "";
+  el("inpLayoutType").value = working.layoutType || "Year-Round";
+  el("inpTags").value  = (working.tags||[]).join(", ");
+  el("inpNotes").value = working.notes || "";
+
+  // photo
+  const img = el("photoImg");
+  const ph  = el("photoPlaceholder");
+  if(working.photo?.dataUrl){
+    img.src = working.photo.dataUrl;
+    img.style.display = "block";
+    ph.style.display = "none";
+    photoT.scale = working.photo.scale ?? 1;
+    photoT.x = working.photo.x ?? 0;
+    photoT.y = working.photo.y ?? 0;
+    applyPhotoTransform();
+  } else {
+    img.style.display = "none";
+    ph.style.display = "block";
+  }
+
+  el("btnAddProduct").disabled = true;
+  el("btnBulkAdd").disabled = true;
+  el("productsHint").textContent = "Select a shelf to manage products.";
+
+  renderShelves();
+  renderProducts();
+
+  // autosave draft
+  state.autosaveDraft = { segId: activeSegId, working };
+  dbSave(state);
+}
+
+function backToLibrary(){
+  setScreen("library");
+  activeSegId = null;
+  activeShelfId = null;
+  working = null;
+  renderLibrary();
+}
+
+/* =======================
+   Floor Capture Mode (iPad)
+   - Create segment + shelves on the fly
+   - Add/update photo using iPad camera
+   - Enter UPC + facings only
+   - Export Capture JSON for Windows import/merge
+   ======================= */
+let floorSegId = null;
+let floorShelfId = null;
+
+function openFloorMode(segId){
+  // Default to first segment if available
+  if(!segId && state.segments.length) segId = state.segments[0].id;
+  floorSegId = segId || null;
+  floorShelfId = null;
+  setScreen("floor");
+  renderFloorSegments();
+  selectFloorSegment(floorSegId);
+}
+
+function renderFloorSegments(){
+  const sel = el("floorSegSelect");
+  if(!sel) return;
+  sel.innerHTML = "";
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = state.segments.length ? "Select a segment…" : "No segments yet (create one)";
+  sel.appendChild(opt0);
+  state.segments.forEach(s=>{
+    const o = document.createElement("option");
+    o.value = s.id;
+    const label = `${s.aisle || "?"} • ${s.side || "?"}${s.name ? " — " + s.name : ""} (${s.layoutType || "Year-Round"})`;
+    o.textContent = label;
+    sel.appendChild(o);
+  });
+  sel.value = floorSegId || "";
+}
+
+function selectFloorSegment(segId){
+  floorSegId = segId || null;
+  floorShelfId = null;
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  el("floorSegSelect").value = floorSegId || "";
+  if(!seg){
+    el("floorSegMeta").textContent = "";
+    el("floorLayoutType").value = "Year-Round";
+    el("floorSegName").value = "";
+    setFloorPhoto(null);
+    renderFloorShelves([]);
+    renderFloorEntry();
+    return;
+  }
+
+  el("floorLayoutType").value = seg.layoutType || "Year-Round";
+  el("floorSegName").value = seg.name || "";
+  el("floorSegMeta").textContent = `Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • ${seg.shelves?.length || 0} shelf(s)`;
+  setFloorPhoto(seg.photo?.dataUrl || null);
+
+  // Default to first shelf
+  if(seg.shelves?.length) floorShelfId = seg.shelves[0].id;
+  renderFloorShelves(seg.shelves || []);
+  renderFloorEntry();
+}
+
+function renderFloorShelves(shelves){
+  const sel = el("floorShelfSelect");
+  sel.innerHTML = "";
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = shelves.length ? "Select a shelf…" : "No shelves yet (create one)";
+  sel.appendChild(opt0);
+  shelves.forEach((sh, i)=>{
+    const o = document.createElement("option");
+    o.value = sh.id;
+    o.textContent = `Shelf ${i+1}${sh.label ? " — " + sh.label : ""}`;
+    sel.appendChild(o);
+  });
+  sel.value = floorShelfId || "";
+}
+
+function setFloorPhoto(dataUrl){
+  const img = el("floorPhotoPreview");
+  const ph = el("floorPhotoPlaceholder");
+  if(dataUrl){
+    img.src = dataUrl;
+    img.style.display = "block";
+    ph.style.display = "none";
+  } else {
+    img.src = "";
+    img.style.display = "none";
+    ph.style.display = "block";
+  }
+}
+
+function ensureFloorReady(){
+  if(!floorSegId){ toast("Select or create a segment first"); return false; }
+  if(!floorShelfId){ toast("Select or create a shelf first"); return false; }
+  return true;
+}
+
+function renderFloorEntry(){
+  const wrap = el("floorEntryTable");
+  const hint = el("floorEntryHint");
+  if(!floorSegId){ hint.textContent = "Select a segment to start."; wrap.innerHTML = ""; return; }
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  if(!seg){ hint.textContent = "Select a segment to start."; wrap.innerHTML = ""; return; }
+  if(!floorShelfId){ hint.textContent = "Select a shelf to start adding UPCs."; wrap.innerHTML = ""; return; }
+  const shelf = (seg.shelves||[]).find(s=>s.id===floorShelfId);
+  if(!shelf){ hint.textContent = "Select a shelf to start adding UPCs."; wrap.innerHTML = ""; return; }
+
+  hint.textContent = `Entering for: ${seg.aisle || "?"} • ${seg.side || "?"}${seg.name ? " — " + seg.name : ""} / ${shelf.label ? shelf.label : "Shelf"}`;
+
+  const rows = shelf.products || (shelf.products = []);
+  const html = [`<table class="table" style="min-width:560px;">
+    <thead><tr><th style="width:60%;">UPC</th><th style="width:20%;">Facings</th><th style="width:20%;">Actions</th></tr></thead>
+    <tbody>
+  `];
+  if(!rows.length){
+    html.push(`<tr><td colspan="3" class="muted">No rows yet. Tap <b>+ Add Row</b> or <b>Bulk Paste UPCs</b>.</td></tr>`);
+  }
+  rows.forEach((p, idx)=>{
+    html.push(`<tr>
+      <td><input data-idx="${idx}" data-field="upc" class="input floorCell" value="${String(p.upc||"").replace(/"/g,'&quot;')}" placeholder="UPC"></td>
+      <td><input data-idx="${idx}" data-field="facings" class="input floorCell" type="number" value="${Number(p.facings||0)}" min="0"></td>
+      <td><button data-idx="${idx}" class="btn btn-outline small floorDel">Delete</button></td>
+    </tr>`);
+  });
+  html.push(`</tbody></table>`);
+  wrap.innerHTML = html.join("");
+
+  wrap.querySelectorAll(".floorCell").forEach(inp=>{
+    inp.addEventListener("change", (e)=>{
+      const i = Number(e.target.getAttribute("data-idx"));
+      const field = e.target.getAttribute("data-field");
+      if(!Number.isFinite(i) || !field) return;
+      if(field==="upc") rows[i].upc = String(e.target.value||"").trim();
+      if(field==="facings") rows[i].facings = Number(e.target.value||0);
+      seg.updatedAt = new Date().toISOString();
+      dbSave(state);
+    });
+  });
+  wrap.querySelectorAll(".floorDel").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const i = Number(btn.getAttribute("data-idx"));
+      if(!confirm("Delete this row?")) return;
+      rows.splice(i,1);
+      seg.updatedAt = new Date().toISOString();
+      dbSave(state);
+      renderFloorEntry();
+    });
+  });
+}
+
+function floorAddRow(){
+  if(!ensureFloorReady()) return;
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  const shelf = (seg.shelves||[]).find(s=>s.id===floorShelfId);
+  shelf.products = shelf.products || [];
+  shelf.products.push({ id: uid("p"), upc:"", description:"", supplier:"", facings:0 });
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  renderFloorEntry();
+}
+
+function floorBulkPaste(){
+  if(!ensureFloorReady()) return;
+  const raw = prompt("Paste UPCs (one per line):") || "";
+  const upcs = raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!upcs.length) return;
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  const shelf = (seg.shelves||[]).find(s=>s.id===floorShelfId);
+  shelf.products = shelf.products || [];
+  upcs.forEach(u=> shelf.products.push({ id: uid("p"), upc:u, description:"", supplier:"", facings:0 }));
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  renderFloorEntry();
+  toast(`Added ${upcs.length} UPC(s)`);
+}
+
+async function floorNewSegment(){
+  const aisle = prompt("Aisle number/name:")?.trim();
+  if(!aisle) return;
+  const isLeft = confirm("Side selection:\nOK = Left\nCancel = Right");
+  const side = isLeft ? "Left" : "Right";
+  const name = (prompt("Segment name (optional):") || "").trim();
+  const isPassover = confirm("Layout Type:\nOK = Passover Only (Seasonal Set)\nCancel = Year-Round (Regular Set)");
+  const layoutType = isPassover ? "Passover" : "Year-Round";
+  const seg = {
+    id: uid("seg"),
+    name,
+    layoutType,
+    aisle,
+    side,
+    tags: [],
+    notes: "",
+    photo: null,
+    shelves: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  state.segments.unshift(seg);
+  dbSave(state);
+  renderLibrary();
+  renderFloorSegments();
+  selectFloorSegment(seg.id);
+  toast("Segment created");
+}
+
+function floorSaveSegmentDetails(){
+  if(!floorSegId){ toast("Select a segment first"); return; }
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  if(!seg) return;
+  seg.layoutType = el("floorLayoutType").value;
+  seg.name = (el("floorSegName").value || "").trim();
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  renderFloorSegments();
+  selectFloorSegment(seg.id);
+  renderLibrary();
+  toast("Saved");
+}
+
+function floorNewShelf(){
+  if(!floorSegId){ toast("Select a segment first"); return; }
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  const label = (prompt("Shelf label/name:") || "").trim();
+  if(!label) return;
+  const sh = { id: uid("shelf"), label, color:"Standard", notchValue:0, notchUnit:"inches", products: [] };
+  seg.shelves = seg.shelves || [];
+  seg.shelves.push(sh);
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  floorShelfId = sh.id;
+  renderFloorShelves(seg.shelves);
+  renderFloorEntry();
+  toast("Shelf created");
+}
+
+function floorRenameShelf(){
+  if(!ensureFloorReady()) return;
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  const sh = (seg.shelves||[]).find(s=>s.id===floorShelfId);
+  const label = (prompt("New shelf label:", sh.label || "") || "").trim();
+  if(!label) return;
+  sh.label = label;
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  renderFloorShelves(seg.shelves);
+  renderFloorEntry();
+  toast("Renamed");
+}
+
+function floorDeleteShelf(){
+  if(!ensureFloorReady()) return;
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  const sh = (seg.shelves||[]).find(s=>s.id===floorShelfId);
+  if(!confirm(`Delete shelf "${sh.label || "(unnamed)"}" and its rows?`)) return;
+  seg.shelves = (seg.shelves||[]).filter(s=>s.id!==floorShelfId);
+  floorShelfId = (seg.shelves[0] && seg.shelves[0].id) || null;
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  renderFloorShelves(seg.shelves);
+  renderFloorEntry();
+  toast("Shelf deleted");
+}
+
+async function floorPhotoChanged(){
+  if(!floorSegId){ toast("Select a segment first"); el("floorPhoto").value=""; return; }
+  const file = el("floorPhoto").files?.[0];
+  if(!file) return;
+  const dataUrl = await readFileAsDataURL(file);
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  // Keep the same photo transform format used by desktop
+  seg.photo = { dataUrl, scale: 1, x: 0, y: 0 };
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  setFloorPhoto(dataUrl);
+  renderLibrary();
+  toast("Photo saved");
+}
+
+function floorClearPhoto(){
+  if(!floorSegId) return;
+  const seg = state.segments.find(s=>s.id===floorSegId);
+  if(!confirm("Remove the segment photo?")) return;
+  seg.photo = null;
+  seg.updatedAt = new Date().toISOString();
+  dbSave(state);
+  setFloorPhoto(null);
+  renderLibrary();
+  toast("Photo removed");
+}
+
+function exportCapture(){
+  const payload = {
+    type: "planogram_floor_capture",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    segments: structuredClone(state.segments || [])
+  };
+  const stamp = new Date().toISOString().slice(0,10);
+  downloadText(`planogram_capture_${stamp}.json`, JSON.stringify(payload, null, 2));
+  toast("Capture exported");
+}
+
+function mergeCaptureIntoLibrary(payload){
+  const importedSegments = payload?.segments || payload?.data?.segments || [];
+  if(!Array.isArray(importedSegments)) throw new Error("Invalid capture file");
+  let created = 0, updated = 0;
+  for(const inc of importedSegments){
+    if(!inc || !inc.id) continue;
+    const existing = state.segments.find(s=>s.id===inc.id);
+    if(!existing){
+      state.segments.unshift(inc);
+      created++;
+      continue;
+    }
+    // Merge metadata (prefer imported for floor-captured fields)
+    existing.name = inc.name ?? existing.name;
+    existing.layoutType = inc.layoutType ?? existing.layoutType;
+    existing.aisle = inc.aisle ?? existing.aisle;
+    existing.side = inc.side ?? existing.side;
+    existing.photo = inc.photo ?? existing.photo;
+    existing.tags = Array.isArray(inc.tags) ? inc.tags : existing.tags;
+    existing.notes = (typeof inc.notes === "string") ? inc.notes : existing.notes;
+    existing.shelves = existing.shelves || [];
+    const inShelves = Array.isArray(inc.shelves) ? inc.shelves : [];
+    for(const ish of inShelves){
+      if(!ish || !ish.id) continue;
+      const exSh = existing.shelves.find(s=>s.id===ish.id);
+      if(!exSh){
+        existing.shelves.push(ish);
+        continue;
+      }
+      // Merge shelf label + basic shelf props
+      exSh.label = ish.label ?? exSh.label;
+      exSh.color = ish.color ?? exSh.color;
+      exSh.notchValue = (ish.notchValue ?? exSh.notchValue);
+      exSh.notchUnit = ish.notchUnit ?? exSh.notchUnit;
+      exSh.products = exSh.products || [];
+      const inProds = Array.isArray(ish.products) ? ish.products : [];
+      for(const ip of inProds){
+        if(!ip) continue;
+        const upc = String(ip.upc||"").trim();
+        if(!upc) continue;
+        const match = exSh.products.find(p=>String(p.upc||"").trim()===upc);
+        if(match){
+          // Update facings; do NOT overwrite description/vendor if already refined on Windows
+          match.facings = Number.isFinite(Number(ip.facings)) ? Number(ip.facings) : match.facings;
+        } else {
+          exSh.products.push({ id: ip.id || uid("p"), upc, description: ip.description || "", supplier: ip.supplier || "", facings: Number.isFinite(Number(ip.facings)) ? Number(ip.facings) : 0 });
+        }
+      }
+    }
+    existing.updatedAt = new Date().toISOString();
+    updated++;
+  }
+  dbSave(state);
+  renderLibrary();
+  toast(`Import complete: ${created} new, ${updated} updated`);
+}
+
+function autosaveDraft(){
+  if(!working || !activeSegId) return;
+  state.autosaveDraft = { segId: activeSegId, working };
+  dbSave(state);
+}
+
+function commitWorking(){
+  working.aisle = el("inpAisle").value.trim();
+  working.side  = el("inpSide").value;
+  working.name  = el("inpSegName").value.trim();
+  working.layoutType = el("inpLayoutType").value || "Year-Round";
+  working.tags  = el("inpTags").value.split(",").map(t=>t.trim()).filter(Boolean);
+  working.notes = el("inpNotes").value.trim();
+  working.updatedAt = new Date().toISOString();
+
+  const idx = state.segments.findIndex(s=>s.id===working.id);
+  state.segments[idx] = structuredClone(working);
+  state.autosaveDraft = null;
+  dbSave(state);
+}
+
+function removeActiveSegment(){
+  if(!working) return;
+  const label = `Aisle ${working.aisle || "?"} • ${working.side || "?"}`;
+  if(!confirm(`Remove this segment from the library?\n\n${label}\nID: ${working.id}\n\nThis cannot be undone.`)) return;
+  state.segments = state.segments.filter(s=>s.id !== working.id);
+  state.autosaveDraft = null;
+  dbSave(state);
+  toast("Segment removed");
+  backToLibrary();
+}
+
+function renderShelves(){
+  const wrap = el("shelfList");
+  wrap.innerHTML = "";
+  if(!working) return;
+
+  working.shelves.forEach((sh, index)=>{
+    const div = document.createElement("div");
+    div.className="shelf";
+
+    const dot = sh.color==="Promo" ? "dot-yellow" : sh.color==="Restricted" ? "dot-red" : "dot-grey";
+
+    div.innerHTML = `
+      <div class="shelf-head">
+        <div>
+          <div class="shelf-title">
+            Shelf ${index+1}${sh.label ? ` — ${String(sh.label).replace(/</g,'&lt;').replace(/>/g,'&gt;')}` : ""}
+            <span class="badge-pill"><span class="dot ${dot}"></span>${sh.color || "Standard"}</span>
+          </div>
+          <div class="muted">Notch height diff: <b>${sh.notchValue || 0} ${sh.notchUnit || "inches"}</b></div>
+        </div>
+        <div><button class="btn btn-outline small btnSelect">Select</button></div>
+      </div>
+
+      <div class="shelf-row">
+        <div>
+          <label class="label">Notch Height Difference</label>
+          <input class="input notchValue" type="number" value="${sh.notchValue ?? 0}">
+        </div>
+        <div>
+          <label class="label">Unit</label>
+          <select class="input notchUnit">
+            <option value="inches" ${sh.notchUnit==="inches"?"selected":""}>inches</option>
+            <option value="cm" ${sh.notchUnit==="cm"?"selected":""}>cm</option>
+            <option value="notches" ${sh.notchUnit==="notches"?"selected":""}>notches</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="shelf-row" style="grid-template-columns: 1fr;">
+        <div>
+          <label class="label">Shelf Label (optional)</label>
+          <input class="input shelfLabel" placeholder="e.g., Bay 2 (Top)" value="${(sh.label ?? "").toString().replace(/"/g,'&quot;')}">
+        </div>
+      </div>
+
+      <div class="shelf-row" style="grid-template-columns: 1fr;">
+        <div>
+          <label class="label">Shelf Color</label>
+          <select class="input shelfColor">
+            <option value="Standard" ${sh.color==="Standard"?"selected":""}>Standard</option>
+            <option value="Promo" ${sh.color==="Promo"?"selected":""}>Promo</option>
+            <option value="Restricted" ${sh.color==="Restricted"?"selected":""}>Restricted</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="shelf-controls">
+        <button class="btn btn-outline small btnUp" ${index===0?"disabled":""}>Move Up</button>
+        <button class="btn btn-outline small btnDown" ${index===working.shelves.length-1?"disabled":""}>Move Down</button>
+        <button class="btn btn-danger small btnDelete">Delete Shelf</button>
+      </div>
+    `;
+
+    div.querySelector(".btnSelect").onclick = ()=>{
+      activeShelfId = sh.id;
+      el("btnAddProduct").disabled = false;
+      el("btnBulkAdd").disabled = false;
+      el("productsHint").textContent = `Managing products for Shelf ${index+1}`;
+      renderProducts();
+      toast("Shelf selected");
+    };
+
+    div.querySelector(".notchValue").onchange = (e)=>{
+      sh.notchValue = Number(e.target.value || 0);
+      autosaveDraft();
+      renderShelves();
+    };
+    div.querySelector(".shelfLabel").onchange = (e)=>{
+      sh.label = String(e.target.value||"").trim();
+      autosaveDraft();
+      renderShelves();
+    };
+    div.querySelector(".notchUnit").onchange = (e)=>{
+      sh.notchUnit = e.target.value;
+      autosaveDraft();
+      renderShelves();
+    };
+    div.querySelector(".shelfLabel").onchange = (e)=>{
+      sh.label = (e.target.value || "").trim();
+      autosaveDraft();
+      renderShelves();
+    };
+    div.querySelector(".shelfColor").onchange = (e)=>{
+      sh.color = e.target.value;
+      autosaveDraft();
+      renderShelves();
+    };
+
+    div.querySelector(".btnUp").onclick = ()=>{
+      if(index===0) return;
+      const tmp = working.shelves[index-1];
+      working.shelves[index-1] = working.shelves[index];
+      working.shelves[index] = tmp;
+      autosaveDraft();
+      renderShelves();
+    };
+    div.querySelector(".btnDown").onclick = ()=>{
+      if(index===working.shelves.length-1) return;
+      const tmp = working.shelves[index+1];
+      working.shelves[index+1] = working.shelves[index];
+      working.shelves[index] = tmp;
+      autosaveDraft();
+      renderShelves();
+    };
+    div.querySelector(".btnDelete").onclick = ()=>{
+      if(!confirm("Delete this shelf and its products?")) return;
+      working.shelves = working.shelves.filter(x=>x.id!==sh.id);
+      if(activeShelfId===sh.id) activeShelfId=null;
+      autosaveDraft();
+      renderShelves();
+      renderProducts();
+    };
+
+    wrap.appendChild(div);
+  });
+}
+
+function renderProducts(){
+  const wrap = el("productList");
+  wrap.innerHTML = "";
+  if(!working || !activeShelfId){
+    wrap.innerHTML = `<div class="muted">No shelf selected.</div>`;
+    return;
+  }
+
+  const shelf = working.shelves.find(s=>s.id===activeShelfId);
+  if(!shelf) return;
+
+  shelf.products.forEach((p, idx)=>{
+    const div = document.createElement("div");
+    div.className="product";
+    div.innerHTML = `
+      <div class="product-head">
+        <div>
+          <div class="product-title">${p.upc || "(no UPC)"} — ${p.description || ""}</div>
+          <div class="product-sub">Supplier: ${p.supplier || "—"} • Facings: ${p.facings || 0}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-outline small btnEdit">Edit</button>
+          <button class="btn btn-danger small btnDel">Delete</button>
+        </div>
+      </div>
+    `;
+    div.querySelector(".btnEdit").onclick = async ()=>{
+      // NOTE: keep prompts (fast data entry) but optionally auto-fill description from UPC when blank.
+      const upc = prompt("UPC:", p.upc || "") ?? p.upc;
+      let description = prompt("Description:", p.description || "") ?? p.description;
+      const supplier = prompt("Supplier / Vendor:", p.supplier || "") ?? p.supplier;
+      const facings = Number(prompt("Facings:", String(p.facings || 0)) ?? p.facings);
+
+      // If user cleared description (or left it blank), offer online lookup
+      try{
+        const auto = await maybeAutofillDescriptionFromUPC({ upc, currentDescription: description });
+        if(auto.lookedUp && auto.description){
+          description = auto.description;
+        }
+      }catch(e){ /* ignore */ }
+
+      p.upc = String(upc).trim();
+      p.description = String(description).trim();
+      p.supplier = String(supplier).trim();
+      p.facings = Number.isFinite(facings) ? facings : p.facings;
+
+      autosaveDraft();
+      renderProducts();
+    };
+    div.querySelector(".btnDel").onclick = ()=>{
+      if(!confirm("Delete product?")) return;
+      shelf.products.splice(idx, 1);
+      autosaveDraft();
+      renderProducts();
+    };
+    wrap.appendChild(div);
+  });
+}
+
+function addShelf(){
+  working.shelves.push({
+    id: uid("shelf"),
+    color: "Standard",
+    notchValue: 0,
+    notchUnit: "inches",
+    products: []
+  });
+  autosaveDraft();
+  renderShelves();
+}
+
+async function addProduct(){
+  if(!activeShelfId) return;
+  const shelf = working.shelves.find(s=>s.id===activeShelfId);
+  const upc = (prompt("UPC?") || "").trim();
+  if(!upc) return;
+
+  // Try offline vendor catalogs first (fast, works offline)
+  let preDesc = "";
+  let preSupplier = "";
+  const catRes = catalogLookup(upc);
+  if(catRes.type === "single"){
+    preDesc = catRes.hit.description || "";
+    preSupplier = catRes.hit.vendorName || "";
+  }
+
+  let description = (prompt("Description?", preDesc) || "").trim();
+
+  // If description left blank, offer online lookup
+  try{
+    const auto = await maybeAutofillDescriptionFromUPC({ upc, currentDescription: description });
+    if(auto.lookedUp && auto.description){
+      description = auto.description;
+    }
+  }catch(e){ /* ignore */ }
+  // If catalog filled a supplier/vendor, use it as the default
+  const supplier = (prompt("Supplier / Vendor?", preSupplier) || "").trim();
+  const facings = Number(prompt("Facings?") || "0");
+  shelf.products.push({ id: uid("p"), upc, description, supplier, facings: Number.isFinite(facings)?facings:0 });
+  autosaveDraft();
+  renderProducts();
+}
+
+async function bulkAdd(){
+  if(!activeShelfId) return;
+  const shelf = working.shelves.find(s=>s.id===activeShelfId);
+  const raw = prompt("Enter UPCs separated by commas:");
+  if(!raw) return;
+  const upcs = raw.split(",").map(x=>x.trim()).filter(Boolean);
+  upcs.forEach(u=> shelf.products.push({ id: uid("p"), upc:u, description:"", supplier:"", facings:0 }));
+  autosaveDraft();
+  renderProducts();
+
+  // First, try filling from offline vendor catalogs
+  let offlineFilled = 0;
+  for(const u of upcs){
+    const prod = shelf.products.find(p=>String(p.upc||"").trim()===String(u).trim());
+    if(!prod) continue;
+    if(String(prod.description||"").trim()) continue;
+    const res = catalogLookup(u);
+    if(res.type === "single"){
+      prod.description = res.hit.description || "";
+      prod.supplier = prod.supplier || res.hit.vendorName;
+      offlineFilled++;
+    }
+  }
+  if(offlineFilled){
+    autosaveDraft();
+    renderProducts();
+    toast(`Filled ${offlineFilled} from Excel catalogs`);
+  }
+
+  // Optional: batch lookup remaining missing descriptions online
+  if(!upcs.length) return;
+  const missing = upcs.filter(u=>{
+    const prod = shelf.products.find(p=>String(p.upc||"").trim()===String(u).trim());
+    return prod && !String(prod.description||"").trim();
+  });
+  if(!missing.length){
+    return;
+  }
+  const doLookup = confirm(`Look up descriptions online for ${missing.length} UPC(s) still missing a description?\n\n(Requires internet. You can skip and enter descriptions later.)`);
+  if(!doLookup) return;
+
+  let updated = 0;
+  for(const u of missing){
+    const prod = shelf.products.find(p=>String(p.upc||"").trim()===String(u).trim());
+    if(!prod) continue;
+    if(String(prod.description||"").trim()) continue;
+    const hit = await lookupUPC(u);
+    if(hit?.description){
+      prod.description = hit.description;
+      updated++;
+      autosaveDraft();
+    }
+  }
+  if(updated){
+    toast(`Filled ${updated} description(s)`);
+    renderProducts();
+  }else{
+    toast("No descriptions found");
+  }
+}
+
+/* =======================
+   Photo editor preview
+   ======================= */
+const photoFrame = el("photoFrame");
+const photoImg = el("photoImg");
+const photoPlaceholder = el("photoPlaceholder");
+
+function applyPhotoTransform(){
+  photoImg.style.transform = `translate(${photoT.x}px, ${photoT.y}px) scale(${photoT.scale})`;
+}
+
+el("filePhoto").addEventListener("change", async ()=>{
+  const file = el("filePhoto").files?.[0];
+  if(!file) return;
+  const dataUrl = await readFileAsDataURL(file);
+  photoImg.src = dataUrl;
+  photoImg.style.display = "block";
+  photoPlaceholder.style.display = "none";
+  photoT.scale = 1; photoT.x=0; photoT.y=0;
+  applyPhotoTransform();
+  working.photo = { dataUrl, scale: photoT.scale, x: photoT.x, y: photoT.y };
+  autosaveDraft();
+});
+
+el("btnFit").onclick = ()=>{
+  photoT.scale=1; photoT.x=0; photoT.y=0;
+  applyPhotoTransform();
+  if(working?.photo){ working.photo.scale=1; working.photo.x=0; working.photo.y=0; autosaveDraft(); }
+};
+el("btnZoomIn").onclick = ()=>{
+  photoT.scale = Math.min(3, photoT.scale + 0.1);
+  applyPhotoTransform();
+  if(working?.photo){ working.photo.scale=photoT.scale; autosaveDraft(); }
+};
+el("btnZoomOut").onclick = ()=>{
+  photoT.scale = Math.max(0.4, photoT.scale - 0.1);
+  applyPhotoTransform();
+  if(working?.photo){ working.photo.scale=photoT.scale; autosaveDraft(); }
+};
+el("btnResetPhoto").onclick = ()=>{
+  if(!confirm("Reset photo positioning?")) return;
+  photoT.scale=1; photoT.x=0; photoT.y=0;
+  applyPhotoTransform();
+  if(working?.photo){ working.photo.scale=1; working.photo.x=0; working.photo.y=0; autosaveDraft(); }
+};
+
+photoFrame.addEventListener("mousedown",(e)=>{
+  if(!photoImg.src) return;
+  photoT.dragging=true;
+  photoT.sx=e.clientX; photoT.sy=e.clientY;
+  photoT.ox=photoT.x; photoT.oy=photoT.y;
+  photoImg.style.cursor="grabbing";
+});
+window.addEventListener("mousemove",(e)=>{
+  if(!photoT.dragging) return;
+  photoT.x = photoT.ox + (e.clientX - photoT.sx);
+  photoT.y = photoT.oy + (e.clientY - photoT.sy);
+  applyPhotoTransform();
+});
+window.addEventListener("mouseup",()=>{
+  if(!photoT.dragging) return;
+  photoT.dragging=false;
+  photoImg.style.cursor="grab";
+  if(working?.photo){
+    working.photo.x=photoT.x; working.photo.y=photoT.y;
+    autosaveDraft();
+  }
+});
+
+/* =======================
+   Print/PDF builder
+   New behavior:
+   - Left side: full height portrait photo
+   - Right side: table grouped by shelf with product details
+   - Shelf header repeats if shelf spans pages
+   ======================= */
+
+function segmentLabel(seg){
+  const nm = String(seg?.name||"").trim();
+  if(nm) return nm;
+  return `Aisle ${seg?.aisle || "?"} • ${seg?.side || "?"}`;
+}
+
+function buildLayoutIndex(){
+  // Build UPC -> [segmentLabel] maps for Year-Round and Passover-only segments
+  const year = new Map();
+  const pass = new Map();
+  const segs = Array.isArray(state.segments) ? structuredClone(state.segments) : [];
+  // Include the current autosave draft (so annotations match what you are about to print)
+  if(state.autosaveDraft?.working){
+    const wi = segs.findIndex(s=>s.id === state.autosaveDraft.working.id);
+    if(wi >= 0) segs[wi] = structuredClone(state.autosaveDraft.working);
+    else segs.unshift(structuredClone(state.autosaveDraft.working));
+  }
+  for(const seg of segs){
+    const type = seg.layoutType || "Year-Round";
+    const label = segmentLabel(seg);
+    const upcs = new Set();
+    (seg.shelves||[]).forEach(sh=> (sh.products||[]).forEach(p=>{ const u=normalizeUPC(p.upc); if(u) upcs.add(u); }));
+    const target = (type === "Passover") ? pass : year;
+    for(const u of upcs){
+      const arr = target.get(u) || [];
+      if(!arr.includes(label)) arr.push(label);
+      target.set(u, arr);
+    }
+  }
+  return { year, pass };
+}
+
+function annotateRowForSegment({ seg, product, index }){
+  // Returns { tag, note } where tag is a short label and note explains movement.
+  const u = normalizeUPC(product?.upc);
+  if(!u) return null;
+
+  const maps = index || buildLayoutIndex();
+  const thisLabel = segmentLabel(seg);
+  const isPassover = (seg.layoutType || "Year-Round") === "Passover";
+
+  const inYear = maps.year.get(u) || [];
+  const inPass = maps.pass.get(u) || [];
+
+  if(isPassover){
+    if(inYear.length === 0){
+      return { tag:"PASSOVER", note:"Added for Passover (not in Year-Round set)" };
+    }
+    const from = inYear.filter(x=>x !== thisLabel);
+    if(from.length){
+      return { tag:"PASSOVER", note:`Moved from: ${from.slice(0,2).join("; ")}${from.length>2?"; …":""}` };
+    }
+    // Present in both and same label (rare but possible)
+    return { tag:"PASSOVER", note:"Also carried Year-Round" };
+  } else {
+    if(inPass.length === 0) return null; // keep Year-Round clean
+    const to = inPass.filter(x=>x !== thisLabel);
+    if(to.length){
+      return { tag:"YEAR-ROUND", note:`Moves to Passover: ${to.slice(0,2).join("; ")}${to.length>2?"; …":""}` };
+    }
+    return { tag:"YEAR-ROUND", note:"Also in Passover set" };
+  }
+}
+
+function buildPrintPages(seg){
+  const printRoot = el("printRoot");
+  printRoot.innerHTML = "";
+
+  const store = state.settings.storeName || "No Frills";
+  const date = new Date().toLocaleString();
+  const annotOn = !!(state.settings && state.settings.autoAnnotate);
+  const layoutIndex = annotOn ? buildLayoutIndex() : null;
+
+  // Flatten into shelf blocks to keep grouping
+  // We'll paginate by "row budget"
+  const ROW_BUDGET = 26; // right-side rows per page (approx)
+  let pages = [];
+  let current = [];
+  let budget = ROW_BUDGET;
+
+  function pushPage(){
+    if(current.length) pages.push(current);
+    current = [];
+    budget = ROW_BUDGET;
+  }
+
+  seg.shelves.forEach((sh, si)=>{
+    const headerRow = {type:"shelfHeader", si, sh, cont:false};
+    const rowsNeeded = 1 + Math.max(1, sh.products.length); // at least one row for empty shelf
+
+    // If the entire shelf fits, push it
+    if(rowsNeeded <= budget){
+      current.push(headerRow);
+      if(sh.products.length){
+        sh.products.forEach(p=>current.push({type:"product", si, sh, p}));
+      } else {
+        current.push({type:"emptyProduct", si, sh});
+      }
+      budget -= rowsNeeded;
+      return;
+    }
+
+    // Otherwise, shelf will span pages
+    // Start with a new page if there's not even room for header+1 row
+    if(budget < 2) pushPage();
+
+    // Add header on current page
+    current.push(headerRow);
+    budget -= 1;
+
+    if(sh.products.length === 0){
+      // empty shelf still needs one row
+      if(budget < 1) pushPage(), current.push({type:"shelfHeader", si, sh, cont:true}), budget -= 1;
+      current.push({type:"emptyProduct", si, sh});
+      budget -= 1;
+      return;
+    }
+
+    // Add as many products as we can, then continue on new pages with repeated header
+    let pi = 0;
+    while(pi < sh.products.length){
+      if(budget === 0){
+        pushPage();
+        current.push({type:"shelfHeader", si, sh, cont:true});
+        budget -= 1;
+      }
+      // ensure at least one row available; if not, new page + header
+      if(budget < 1){
+        pushPage();
+        current.push({type:"shelfHeader", si, sh, cont:true});
+        budget -= 1;
+      }
+      current.push({type:"product", si, sh, p: sh.products[pi]});
+      budget -= 1;
+      pi += 1;
+
+      // If the next product would not fit but we are mid-shelf, page break will occur and header repeats
+      if(budget === 0 && pi < sh.products.length){
+        // next loop will create new page and repeat header
+      }
+    }
+  });
+
+  if(current.length) pages.push(current);
+
+  // Add a cover page (full-size photo) as page 1
+  const totalPages = pages.length + 1;
+  {
+    const cover = document.createElement("div");
+    cover.className = "print-page print-page-cover";
+
+    const header = document.createElement("div");
+    header.className = "print-header";
+    header.innerHTML = `
+      <div class="print-brand">
+        <div class="print-badge">NF</div>
+        <div>
+          <div class="print-title">${store} — Planogram</div>
+          <div class="print-sub"><b>${segmentLabel(seg)}</b> • Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • <b>${seg.layoutType || "Year-Round"}</b></div>
+          <div class="print-sub">Tags: ${(seg.tags||[]).join(", ") || "—"}</div>
+        </div>
+      </div>
+      <div class="print-meta">
+        <div><b>Segment:</b> ${seg.id}</div>
+        <div><b>Date:</b> ${date}</div>
+        <div><b>Page:</b> 1 / ${totalPages}</div>
+      </div>
+    `;
+
+    const body = document.createElement("div");
+    body.className = "print-cover-body";
+
+    const photo = document.createElement("div");
+    photo.className = "print-cover-photo";
+    photo.innerHTML = seg.photo?.dataUrl
+      ? `<img src="${seg.photo.dataUrl}" alt="photo">`
+      : `<div style="padding:12px;font-size:12px;">No photo</div>`;
+
+    body.appendChild(photo);
+    cover.appendChild(header);
+    cover.appendChild(body);
+    printRoot.appendChild(cover);
+  }
+
+  // Standard pages (photo on left ~1/3, table on right)
+  pages.forEach((pageRows, pageIndex)=>{
+    const page = document.createElement("div");
+    page.className="print-page";
+
+    const header = document.createElement("div");
+    header.className="print-header";
+    header.innerHTML = `
+      <div class="print-brand">
+        <div class="print-badge">NF</div>
+        <div>
+          <div class="print-title">${store} — Planogram</div>
+          <div class="print-sub"><b>${segmentLabel(seg)}</b> • Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • <b>${seg.layoutType || "Year-Round"}</b></div>
+          <div class="print-sub">Tags: ${(seg.tags||[]).join(", ") || "—"}</div>
+        </div>
+      </div>
+      <div class="print-meta">
+        <div><b>Segment:</b> ${seg.id}</div>
+        <div><b>Date:</b> ${date}</div>
+        <div><b>Page:</b> ${pageIndex+2} / ${totalPages}</div>
+      </div>
+    `;
+
+    const body = document.createElement("div");
+    body.className="print-body";
+
+    const left = document.createElement("div");
+    left.className="print-photo";
+    left.innerHTML = seg.photo?.dataUrl
+      ? `<img src="${seg.photo.dataUrl}" alt="photo">`
+      : `<div style="padding:12px;font-size:12px;">No photo</div>`;
+
+    const right = document.createElement("div");
+    right.className="print-right";
+    right.innerHTML = `
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width:22%;">UPC</th>
+            <th>Description</th>
+            <th style="width:10%;">Facings</th>
+            <th style="width:20%;">Supplier</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
+
+    const tbody = right.querySelector("tbody");
+
+    pageRows.forEach(r=>{
+      if(r.type==="shelfHeader"){
+        const tr = document.createElement("tr");
+        tr.className="shelf-header-row";
+        const cont = r.cont ? " (cont.)" : "";
+        const shLabel = r.sh.label ? ` — ${String(r.sh.label).replace(/</g,'&lt;').replace(/>/g,'&gt;')}` : "";
+        tr.innerHTML = `
+          <td colspan="4">
+            Shelf ${r.si+1}${shLabel}${cont} —
+            <span class="sub">Notch: ${r.sh.notchValue||0} ${r.sh.notchUnit||"inches"}</span>
+            • <span class="sub">${r.sh.color||"Standard"}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      } else if(r.type==="emptyProduct"){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td></td><td><span class="muted">No products</span></td><td></td><td></td>`;
+        tbody.appendChild(tr);
+      } else {
+        const p = r.p;
+        const ann = annotOn ? annotateRowForSegment({ seg, product: p, index: layoutIndex }) : null;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.upc || ""}</td>
+          <td>${p.description || ""}${ann ? `<div class="anno"><span class="tag">${ann.tag}</span><span class="muted2">${ann.note}</span></div>` : ""}</td>
+          <td>${p.facings || 0}</td>
+          <td>${p.supplier || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    });
+
+    body.appendChild(left);
+    body.appendChild(right);
+
+    page.appendChild(header);
+    page.appendChild(body);
+
+    printRoot.appendChild(page);
+  });
+}
+
+function printSegment(){
+  if(!state.autosaveDraft?.working){
+    alert("Open a segment first.");
+    return;
+  }
+  // Use the most current draft if present; otherwise use stored segment
+  const seg = state.autosaveDraft.working;
+  buildPrintPages(seg);
+  window.print();
+}
+
+function buildShelfReportPages(seg){
+  const printRoot = el("printRoot");
+  printRoot.innerHTML = "";
+
+  const store = state.settings.storeName || "No Frills";
+  const date = new Date().toLocaleString();
+  const annotOn = !!(state.settings && state.settings.autoAnnotate);
+  const layoutIndex = annotOn ? buildLayoutIndex() : null;
+
+  // paginate a little higher because there is no photo column
+  const ROW_BUDGET = 34;
+  let pages = [];
+  let current = [];
+  let budget = ROW_BUDGET;
+  function pushPage(){
+    if(current.length) pages.push(current);
+    current = [];
+    budget = ROW_BUDGET;
+  }
+
+  (seg.shelves||[]).forEach((sh, si)=>{
+    const headerRow = {type:"shelfHeader", si, sh, cont:false};
+    const rowsNeeded = 1 + Math.max(1, (sh.products||[]).length);
+    if(rowsNeeded <= budget){
+      current.push(headerRow);
+      if(sh.products?.length){
+        sh.products.forEach(p=>current.push({type:"product", si, sh, p}));
+      } else {
+        current.push({type:"emptyProduct", si, sh});
+      }
+      budget -= rowsNeeded;
+      return;
+    }
+    if(budget < 2) pushPage();
+    current.push(headerRow);
+    budget -= 1;
+    if(!sh.products?.length){
+      if(budget < 1){ pushPage(); current.push({type:"shelfHeader", si, sh, cont:true}); budget -= 1; }
+      current.push({type:"emptyProduct", si, sh});
+      budget -= 1;
+      return;
+    }
+    let pi = 0;
+    while(pi < sh.products.length){
+      if(budget === 0){
+        pushPage();
+        current.push({type:"shelfHeader", si, sh, cont:true});
+        budget -= 1;
+      }
+      if(budget < 1){
+        pushPage();
+        current.push({type:"shelfHeader", si, sh, cont:true});
+        budget -= 1;
+      }
+      current.push({type:"product", si, sh, p: sh.products[pi]});
+      budget -= 1;
+      pi += 1;
+    }
+  });
+  if(current.length) pages.push(current);
+
+  const totalPages = pages.length + 1;
+  // Cover page (portrait)
+  {
+    const cover = document.createElement("div");
+    cover.className = "print-page print-page-cover";
+    const header = document.createElement("div");
+    header.className = "print-header";
+    header.innerHTML = `
+      <div class="print-brand">
+        <div class="print-badge">NF</div>
+        <div>
+          <div class="print-title">${store} — Shelf Report</div>
+          <div class="print-sub"><b>${segmentLabel(seg)}</b> • Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • <b>${seg.layoutType || "Year-Round"}</b></div>
+          <div class="print-sub">Tags: ${(seg.tags||[]).join(", ") || "—"}</div>
+        </div>
+      </div>
+      <div class="print-meta">
+        <div><b>Segment:</b> ${seg.id}</div>
+        <div><b>Date:</b> ${date}</div>
+        <div><b>Page:</b> 1 / ${totalPages}</div>
+      </div>
+    `;
+    const body = document.createElement("div");
+    body.className = "print-cover-body";
+    const photo = document.createElement("div");
+    photo.className = "print-cover-photo";
+    photo.innerHTML = seg.photo?.dataUrl
+      ? `<img src="${seg.photo.dataUrl}" alt="photo">`
+      : `<div style="padding:12px;font-size:12px;">No photo</div>`;
+    body.appendChild(photo);
+    cover.appendChild(header);
+    cover.appendChild(body);
+    printRoot.appendChild(cover);
+  }
+
+  pages.forEach((pageRows, pageIndex)=>{
+    const page = document.createElement("div");
+    page.className = "print-page";
+
+    const header = document.createElement("div");
+    header.className = "print-header";
+    header.innerHTML = `
+      <div class="print-brand">
+        <div class="print-badge">NF</div>
+        <div>
+          <div class="print-title">${store} — Shelf Report</div>
+          <div class="print-sub"><b>${segmentLabel(seg)}</b> • Aisle ${seg.aisle || "?"} • ${seg.side || "?"} • <b>${seg.layoutType || "Year-Round"}</b></div>
+          <div class="print-sub">Tags: ${(seg.tags||[]).join(", ") || "—"}</div>
+        </div>
+      </div>
+      <div class="print-meta">
+        <div><b>Segment:</b> ${seg.id}</div>
+        <div><b>Date:</b> ${date}</div>
+        <div><b>Page:</b> ${pageIndex+2} / ${totalPages}</div>
+      </div>
+    `;
+
+    const body = document.createElement("div");
+    body.className = "print-body-report";
+    const right = document.createElement("div");
+    right.className = "print-right";
+    right.innerHTML = `
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width:22%;">UPC</th>
+            <th>Description</th>
+            <th style="width:10%;">Facings</th>
+            <th style="width:20%;">Supplier</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
+    const tbody = right.querySelector("tbody");
+    pageRows.forEach(r=>{
+      if(r.type === "shelfHeader"){
+        const tr = document.createElement("tr");
+        tr.className = "shelf-header-row";
+        const cont = r.cont ? " (cont.)" : "";
+        const shLabel = r.sh.label ? ` — ${String(r.sh.label).replace(/</g,'&lt;').replace(/>/g,'&gt;')}` : "";
+        tr.innerHTML = `
+          <td colspan="4">
+            Shelf ${r.si+1}${shLabel}${cont} —
+            <span class="sub">Notch: ${r.sh.notchValue||0} ${r.sh.notchUnit||"inches"}</span>
+            • <span class="sub">${r.sh.color||"Standard"}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      } else if(r.type === "emptyProduct"){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td></td><td><span class="muted">No products</span></td><td></td><td></td>`;
+        tbody.appendChild(tr);
+      } else {
+        const p = r.p;
+        const ann = annotOn ? annotateRowForSegment({ seg, product: p, index: layoutIndex }) : null;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.upc || ""}</td>
+          <td>${p.description || ""}${ann ? `<div class="anno"><span class="tag">${ann.tag}</span><span class="muted2">${ann.note}</span></div>` : ""}</td>
+          <td>${p.facings || 0}</td>
+          <td>${p.supplier || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    });
+    body.appendChild(right);
+    page.appendChild(header);
+    page.appendChild(body);
+    printRoot.appendChild(page);
+  });
+}
+
+function printShelfReport(){
+  if(!state.autosaveDraft?.working){
+    alert("Open a segment first.");
+    return;
+  }
+  const seg = state.autosaveDraft.working;
+  buildShelfReportPages(seg);
+  window.print();
+}
+
+/* =======================
+   Export/Import Library
+   ======================= */
+el("btnExportLibrary").onclick = ()=>{
+  downloadText("PlanogramLibrary_V2_PDF.json", JSON.stringify(state, null, 2), "application/json");
+  toast("Library exported");
+};
+el("fileImportLibrary").onchange = async ()=>{
+  const file = el("fileImportLibrary").files?.[0];
+  if(!file) return;
+  const text = await file.text();
+  try{
+    const imported = JSON.parse(text);
+    state = imported;
+    dbSave(state);
+    toast("Library imported — reloading…");
+    location.reload();
+  }catch{
+    toast("Invalid library file");
+  }
+};
+
+/* =======================
+   Export Capture (iPad) + Import & Merge (Windows)
+   ======================= */
+el("btnExportCapture").onclick = exportCapture;
+el("fileImportCapture").onchange = async ()=>{
+  const file = el("fileImportCapture").files?.[0];
+  if(!file) return;
+  const text = await file.text();
+  try{
+    const payload = JSON.parse(text);
+    mergeCaptureIntoLibrary(payload);
+  }catch(e){
+    toast("Invalid capture file");
+  } finally {
+    el("fileImportCapture").value = "";
+  }
+};
+
+/* =======================
+   CSV export
+   ======================= */
+function exportCSV(){
+  if(!state.autosaveDraft?.working){
+    alert("Open a segment first.");
+    return;
+  }
+  const seg = state.autosaveDraft.working;
+  const lines = [];
+  lines.push(["Aisle", seg.aisle, "Side", seg.side].join(","));
+  lines.push(["Tags", (seg.tags||[]).join("; ")].join(","));
+  lines.push(["Notes", (seg.notes||"").replaceAll("\n"," ")].join(","));
+  lines.push("");
+  lines.push("Shelf,ShelfColor,NotchValue,NotchUnit,UPC,Description,Facings,Supplier");
+  seg.shelves.forEach((sh, idx)=>{
+    if(sh.products.length===0){
+      lines.push([idx+1, sh.color||"Standard", sh.notchValue||0, sh.notchUnit||"inches","","","", ""].join(","));
+    } else {
+      sh.products.forEach(p=>{
+        lines.push([
+          idx+1,
+          sh.color||"Standard",
+          sh.notchValue||0,
+          sh.notchUnit||"inches",
+          `"${(p.upc||"").replaceAll('"','""')}"`,
+          `"${(p.description||"").replaceAll('"','""')}"`,
+          p.facings||0,
+          `"${(p.supplier||"").replaceAll('"','""')}"`
+        ].join(","));
+      });
+    }
+  });
+  downloadText(`Segment_${seg.aisle||"X"}_${seg.side||"X"}_${seg.id}.csv`, lines.join("\n"), "text/csv");
+  toast("CSV exported");
+}
+
+/* =======================
+   Vendor Catalogs UI + Lookup
+   ======================= */
+const modalVendor = el("modalVendor");
+const vendorCatalogTable = el("vendorCatalogTable");
+const vendorStatus = el("vendorStatus");
+const vendorMapPanel = el("vendorMapPanel");
+const vendorMapName = el("vendorMapName");
+const vendorMapSheet = el("vendorMapSheet");
+const vendorMapUpc = el("vendorMapUpc");
+const vendorMapDesc = el("vendorMapDesc");
+const vendorMapPreview = el("vendorMapPreview");
+
+let pendingVendorFile = null;
+let pendingWorkbook = null;
+let pendingPreviewRows = [];
+let vendorFileQueue = [];
+
+function showVendorModal(){
+  modalVendor.classList.add("active");
+  modalVendor.setAttribute("aria-hidden", "false");
+  renderVendorCatalogsTable();
+  renderVendorConflicts();
+}
+function hideVendorModal(){
+  modalVendor.classList.remove("active");
+  modalVendor.setAttribute("aria-hidden", "true");
+  vendorMapPanel.style.display = "none";
+  vendorStatus.style.display = "none";
+}
+
+function statusBox(msg, kind="info"){
+  vendorStatus.style.display = "block";
+  vendorStatus.innerHTML = `<div style="font-weight:900;">${kind === "error" ? "Error" : "Status"}</div><div class="muted" style="margin-top:6px;">${msg}</div>`;
+}
+
+function renderVendorCatalogsTable(){
+  vendorCatalogTable.innerHTML = "";
+  if(!vendorCatalogs.length){
+    vendorCatalogTable.innerHTML = `<tr><td colspan="6" class="muted">No vendor catalogs loaded.</td></tr>`;
+    return;
+  }
+  vendorCatalogs.forEach(cat=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><span class="pill">${cat.vendorName}</span></td>
+      <td class="muted">${cat.fileName}</td>
+      <td>${cat.rowCount || 0}</td>
+      <td>${cat.upcColumn || ""}</td>
+      <td>${cat.descColumn || ""}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-outline small" data-act="refresh" data-id="${cat.id}">Refresh</button>
+        <button class="btn btn-danger small" data-act="delete" data-id="${cat.id}">Remove</button>
+      </td>
+    `;
+    vendorCatalogTable.appendChild(tr);
+  });
+
+  vendorCatalogTable.querySelectorAll("button").forEach(btn=>{
+    const act = btn.getAttribute("data-act");
+    const id = btn.getAttribute("data-id");
+    btn.onclick = async ()=>{
+      if(act === "delete"){
+        if(!confirm("Remove this vendor catalog from this device?")) return;
+        await vendorDBDelete(id);
+        vendorCatalogs = vendorCatalogs.filter(c=>c.id!==id);
+        rebuildVendorIndex();
+        renderVendorCatalogsTable();
+        toast("Catalog removed");
+      }
+      if(act === "refresh"){
+        statusBox("To refresh, re-add the updated file using + Add Files. The old one can be removed after.");
+      }
+    };
+  });
+}
+
+function segLabelById(segId){
+  const seg = state.segments.find(s=>s.id===segId) || (state.autosaveDraft?.working && state.autosaveDraft.segId===segId ? state.autosaveDraft.working : null);
+  if(!seg) return segId;
+  const a = seg.aisle ? `Aisle ${seg.aisle}` : "Aisle";
+  const side = seg.side || "";
+  return `${a} ${side}`.trim();
+}
+
+function renderVendorConflicts(){
+  const conflicts = loadVendorConflicts();
+  const holder = document.getElementById("vendorConflicts");
+  if(!holder) return;
+  if(!conflicts.length){
+    holder.innerHTML = `<div class="muted">No UPC conflicts.</div>`;
+    return;
+  }
+
+  const segLabel = (segId)=>{
+    const seg = state.segments.find(s=>s.id===segId);
+    if(!seg) return segId;
+    const a = seg.aisle ? `Aisle ${seg.aisle}` : "Aisle";
+    const side = seg.side ? `• ${seg.side}` : "";
+    return `${a} ${side}`.trim();
+  };
+
+  const rows = conflicts.map(c=>{
+    const opts = c.candidates.map(x=>`<option value="${x.catalogId}">${x.vendorName}</option>`).join("");
+    return `
+      <tr>
+        <td><span class="pill">${segLabelById(c.segId)}</span></td>
+        <td>${c.upc}</td>
+        <td>
+          <select class="input" data-seg="${c.segId}" data-upc="${c.upc}" data-prod="${c.productId}" style="max-width:280px;">
+            ${opts}
+          </select>
+        </td>
+        <td class="muted">${c.candidates.length} matches</td>
+      </tr>
+    `;
+  }).join("");
+
+  holder.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+      <div>
+        <div style="font-weight:900;">UPC Conflicts</div>
+        <div class="muted" style="margin-top:2px;">These UPCs matched more than one vendor catalog. Choose which vendor to use.</div>
+      </div>
+      <button id="btnApplyVendorChoices" class="btn btn-primary small">Apply Choices</button>
+    </div>
+    <table class="table">
+      <thead><tr><th>Segment</th><th>UPC</th><th>Use vendor</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  const applyBtn = document.getElementById("btnApplyVendorChoices");
+  applyBtn.onclick = ()=>{
+    const selections = [...holder.querySelectorAll("select")].map(s=>(
+      {
+        segId: s.getAttribute("data-seg"),
+        upc: s.getAttribute("data-upc"),
+        productId: s.getAttribute("data-prod"),
+        catalogId: s.value
+      }
+    ));
+    const byId = new Map(vendorCatalogs.map(c=>[c.id,c]));
+
+    const applyToSeg = (seg, pick)=>{
+      const cat = byId.get(pick.catalogId);
+      if(!cat) return;
+      const wantUpc = normalizeUPC(pick.upc);
+      const desc = (cat.upcToDesc || {})[wantUpc] || "";
+      seg.shelves.forEach(sh=>{
+        sh.products.forEach(p=>{
+          if(p.id !== pick.productId) return;
+          if(desc) p.description = p.description || desc;
+          p.supplier = cat.vendorName;
+        });
+      });
+    };
+
+    selections.forEach(pick=>{
+      if(state.autosaveDraft?.working && state.autosaveDraft.segId === pick.segId){
+        applyToSeg(state.autosaveDraft.working, pick);
+      } else {
+        const seg = state.segments.find(s=>s.id===pick.segId);
+        if(seg) applyToSeg(seg, pick);
+      }
+    });
+
+    // Persist updates
+    if(state.autosaveDraft?.working){
+      commitWorking();
+    } else {
+      dbSave(state);
+    }
+
+    saveVendorConflicts([]);
+    renderVendorConflicts();
+    renderLibrary();
+    if(state.autosaveDraft?.working) renderProducts();
+    toast("Vendor choices applied");
+  };
+}
+
+
+function parseCSVText(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  const rows = lines.map(line=>{
+    // Basic CSV splitter supporting quotes
+    const out=[];
+    let cur="";
+    let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){
+        if(inQ && line[i+1]==='"'){ cur+='"'; i++; }
+        else inQ = !inQ;
+      } else if(ch==="," && !inQ){ out.push(cur); cur=""; }
+      else cur+=ch;
+    }
+    out.push(cur);
+    return out;
+  });
+  return rows;
+}
+
+function renderPreviewTable(matrix, limit=8){
+  if(!matrix?.length) return "";
+  const head = matrix[0] || [];
+  const body = matrix.slice(1, 1+limit);
+  const th = head.map(h=>`<th style="padding:6px 8px; border-bottom:1px solid var(--border); font-size:12px;">${String(h||"")}</th>`).join("");
+  const trs = body.map(r=>{
+    const tds = head.map((_,idx)=>`<td style="padding:6px 8px; border-bottom:1px solid var(--border);">${String(r[idx]??"")}</td>`).join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+  return `<table style="width:100%; border-collapse:collapse;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+function fillSelectOptions(sel, values){
+  sel.innerHTML = values.map(v=>`<option value="${String(v)}">${String(v)}</option>`).join("");
+}
+
+async function beginMapVendorFile(file){
+  pendingVendorFile = file;
+  vendorMapPanel.style.display = "block";
+  vendorStatus.style.display = "none";
+  vendorMapName.value = file.name.replace(/\.[^.]+$/, "");
+  vendorMapPreview.innerHTML = "";
+  vendorMapSheet.innerHTML = "";
+
+  const lower = file.name.toLowerCase();
+  if(lower.endsWith(".csv")){
+    const text = await file.text();
+    const matrix = parseCSVText(text);
+    pendingWorkbook = { type: "csv", matrix };
+    pendingPreviewRows = matrix;
+    vendorMapSheet.innerHTML = `<option value="csv">CSV</option>`;
+    const headers = (matrix[0] || []).map(h=>String(h||"").trim()).filter(Boolean);
+    fillSelectOptions(vendorMapUpc, headers);
+    fillSelectOptions(vendorMapDesc, headers);
+    // best-guess selections
+    const upcGuess = headers.find(h=>/upc|gtin|barcode/i.test(h)) || headers[0];
+    const descGuess = headers.find(h=>/desc|description|item|product/i.test(h)) || headers[1] || headers[0];
+    vendorMapUpc.value = upcGuess || "";
+    vendorMapDesc.value = descGuess || "";
+    vendorMapPreview.innerHTML = renderPreviewTable(matrix, 8);
+    return;
+  }
+
+  if(!window.XLSX){
+    statusBox("Excel support isn't available yet. Open this app once while online so the XLSX library can load and be cached for offline use.", "error");
+    vendorMapPanel.style.display = "none";
+    return;
+  }
+
+  const buf = await file.arrayBuffer();
+  const wb = window.XLSX.read(buf, { type:"array" });
+  pendingWorkbook = { type: "xlsx", wb };
+  const sheets = wb.SheetNames || [];
+  vendorMapSheet.innerHTML = sheets.map(s=>`<option value="${s}">${s}</option>`).join("");
+  const first = sheets[0];
+  vendorMapSheet.value = first;
+  const sheet = wb.Sheets[first];
+  const matrix = window.XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:"" });
+  pendingPreviewRows = matrix;
+  const headers = (matrix[0] || []).map(h=>String(h||"").trim()).filter(Boolean);
+  fillSelectOptions(vendorMapUpc, headers);
+  fillSelectOptions(vendorMapDesc, headers);
+  const upcGuess = headers.find(h=>/upc|gtin|barcode/i.test(h)) || headers[0];
+  const descGuess = headers.find(h=>/desc|description|item|product/i.test(h)) || headers[1] || headers[0];
+  vendorMapUpc.value = upcGuess || "";
+  vendorMapDesc.value = descGuess || "";
+  vendorMapPreview.innerHTML = renderPreviewTable(matrix, 8);
+}
+
+async function indexPendingVendorFile(){
+  if(!pendingVendorFile || !pendingWorkbook) return;
+  const vendorName = String(vendorMapName.value||"").trim() || pendingVendorFile.name.replace(/\.[^.]+$/, "");
+  const upcCol = vendorMapUpc.value;
+  const descCol = vendorMapDesc.value;
+  const sheetName = vendorMapSheet.value;
+
+  let matrix = pendingPreviewRows;
+  if(pendingWorkbook.type === "xlsx"){
+    const wb = pendingWorkbook.wb;
+    const sheet = wb.Sheets[sheetName];
+    matrix = window.XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:"" });
+  }
+
+  const headerRow = matrix[0] || [];
+  const upcIdx = headerRow.findIndex(h=>String(h).trim()===upcCol);
+  const descIdx = headerRow.findIndex(h=>String(h).trim()===descCol);
+  if(upcIdx < 0 || descIdx < 0){
+    statusBox("Could not find the selected columns. Please check your mapping.", "error");
+    return;
+  }
+
+  const upcToDesc = {};
+  let count = 0;
+  for(let r=1; r<matrix.length; r++){
+    const row = matrix[r] || [];
+    const upc = normalizeUPC(row[upcIdx]);
+    if(!upc) continue;
+    const desc = String(row[descIdx] ?? "").trim();
+    if(!desc) continue;
+    if(!(upc in upcToDesc)){
+      upcToDesc[upc] = desc;
+      count++;
+    }
+  }
+  const catalog = {
+    id: uid("vendor"),
+    vendorName,
+    fileName: pendingVendorFile.name,
+    sheetName: pendingWorkbook.type === "xlsx" ? sheetName : "csv",
+    upcColumn: upcCol,
+    descColumn: descCol,
+    rowCount: count,
+    indexedAt: Date.now(),
+    upcToDesc
+  };
+
+  await vendorDBPut(catalog);
+  vendorCatalogs.push(catalog);
+  rebuildVendorIndex();
+  pendingVendorFile = null;
+  pendingWorkbook = null;
+  pendingPreviewRows = [];
+  vendorMapPanel.style.display = "none";
+  renderVendorCatalogsTable();
+  toast("Catalog indexed");
+
+  // Auto-continue if multiple files were selected
+  if(vendorFileQueue.length){
+    const next = vendorFileQueue.shift();
+    beginMapVendorFile(next);
+  }
+}
+
+function catalogLookup(upcRaw){
+  const upc = normalizeUPC(upcRaw);
+  if(!upc) return { type:"none" };
+  const hits = vendorIndex.get(upc) || [];
+  if(hits.length === 0) return { type:"none" };
+  if(hits.length === 1) return { type:"single", hit: hits[0] };
+  return { type:"multi", hits };
+}
+
+function fillMissingFromCatalogs(scope="segment"){
+  if(!vendorCatalogs.length){
+    toast("No vendor catalogs loaded");
+    showVendorModal();
+    return;
+  }
+
+  const byId = new Map(vendorCatalogs.map(c=>[c.id,c]));
+  const conflicts = [];
+  let filled = 0;
+
+  const applyToSegment = (seg)=>{
+    seg.shelves.forEach(sh=>{
+      sh.products.forEach(p=>{
+        if(String(p.description||"").trim()) return;
+        const res = catalogLookup(p.upc);
+        if(res.type === "single"){
+          p.description = res.hit.description || "";
+          p.supplier = p.supplier || res.hit.vendorName;
+          filled++;
+        } else if(res.type === "multi"){
+          conflicts.push({
+            upc: normalizeUPC(p.upc),
+            productId: p.id,
+            segId: seg.id,
+            candidates: res.hits
+          });
+        }
+      });
+    });
+  };
+
+  if(scope === "all"){
+    if(!state.segments.length){
+      toast("No segments in library");
+      return;
+    }
+    const ok = confirm("Fill missing descriptions from Excel across ALL segments? This will save updates to your library.");
+    if(!ok) return;
+
+    // Apply to every segment; use working draft if it matches the active seg
+    state.segments.forEach(seg=>{
+      if(state.autosaveDraft?.working && state.autosaveDraft.segId === seg.id){
+        applyToSegment(state.autosaveDraft.working);
+      } else {
+        applyToSegment(seg);
+      }
+    });
+
+    // Persist changes (including current working segment)
+    if(state.autosaveDraft?.working){
+      commitWorking();
+    } else {
+      dbSave(state);
+    }
+
+    renderLibrary();
+    if(state.autosaveDraft?.working) renderProducts();
+
+  } else {
+    // Segment-only (current open segment)
+    if(!state.autosaveDraft?.working){
+      alert("Open a segment first.");
+      return;
+    }
+    applyToSegment(state.autosaveDraft.working);
+    renderProducts();
+  }
+
+  if(conflicts.length){
+    saveVendorConflicts(conflicts);
+    toast(`Filled ${filled}. ${conflicts.length} UPCs matched multiple vendors.`);
+    showVendorModal();
+  } else {
+    saveVendorConflicts([]);
+    toast(`Filled ${filled} descriptions from Excel catalogs`);
+  }
+}
+
+/* =======================
+   Wiring
+   ======================= */
+el("btnFloorMode").onclick = ()=> openFloorMode();
+el("btnFloorBack").onclick = backToLibrary;
+el("floorSegSelect").onchange = (e)=> selectFloorSegment(e.target.value);
+el("btnFloorNewSegment").onclick = floorNewSegment;
+el("btnFloorSaveSegment").onclick = floorSaveSegmentDetails;
+el("floorLayoutType").onchange = ()=>{};
+
+el("btnFloorNewShelf").onclick = floorNewShelf;
+el("floorShelfSelect").onchange = (e)=>{ floorShelfId = e.target.value || null; renderFloorEntry(); };
+el("btnFloorRenameShelf").onclick = floorRenameShelf;
+el("btnFloorDeleteShelf").onclick = floorDeleteShelf;
+
+el("btnFloorAddRow").onclick = floorAddRow;
+el("btnFloorBulkPaste").onclick = floorBulkPaste;
+el("btnFloorExportCapture").onclick = exportCapture;
+el("floorPhoto").onchange = floorPhotoChanged;
+el("btnFloorClearPhoto").onclick = floorClearPhoto;
+
+el("btnVendorCatalogs").onclick = async ()=>{
+  vendorCatalogs = await vendorDBGetAll();
+  rebuildVendorIndex();
+  showVendorModal();
+};
+el("btnVendorClose").onclick = hideVendorModal;
+modalVendor.addEventListener("click", (e)=>{
+  if(e.target === modalVendor) hideVendorModal();
+});
+el("btnFillMissingCatalogs").onclick = ()=> fillMissingFromCatalogs("segment");
+el("btnFillMissingCatalogsAll").onclick = ()=> fillMissingFromCatalogs("all");
+
+el("fileVendorCatalogs").onchange = async ()=>{
+  const files = [...(el("fileVendorCatalogs").files || [])];
+  if(!files.length) return;
+  vendorFileQueue = files.slice(1);
+  beginMapVendorFile(files[0]);
+  // reset input so selecting the same file again triggers onchange
+  el("fileVendorCatalogs").value = "";
+};
+el("btnVendorMapCancel").onclick = ()=>{
+  pendingVendorFile = null;
+  pendingWorkbook = null;
+  pendingPreviewRows = [];
+  vendorFileQueue = [];
+  vendorMapPanel.style.display = "none";
+};
+el("btnVendorMapSave").onclick = indexPendingVendorFile;
+
+el("vendorMapSheet").onchange = ()=>{
+  if(!pendingWorkbook || pendingWorkbook.type !== "xlsx") return;
+  const sheetName = vendorMapSheet.value;
+  const wb = pendingWorkbook.wb;
+  const sheet = wb.Sheets[sheetName];
+  const matrix = window.XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:"" });
+  pendingPreviewRows = matrix;
+  const headers = (matrix[0] || []).map(h=>String(h||"").trim()).filter(Boolean);
+  fillSelectOptions(vendorMapUpc, headers);
+  fillSelectOptions(vendorMapDesc, headers);
+  const upcGuess = headers.find(h=>/upc|gtin|barcode/i.test(h)) || headers[0];
+  const descGuess = headers.find(h=>/desc|description|item|product/i.test(h)) || headers[1] || headers[0];
+  vendorMapUpc.value = upcGuess || "";
+  vendorMapDesc.value = descGuess || "";
+  vendorMapPreview.innerHTML = renderPreviewTable(matrix, 8);
+};
+
+el("btnVendorClearAll").onclick = async ()=>{
+  if(!confirm("Clear ALL vendor catalogs from this device?")) return;
+  await vendorDBClear();
+  vendorCatalogs = [];
+  rebuildVendorIndex();
+  saveVendorConflicts([]);
+  renderVendorCatalogsTable();
+  renderVendorConflicts();
+  toast("All vendor catalogs cleared");
+};
+
+el("btnNewSegment").onclick = createSegment;
+el("globalSearch").oninput = renderLibrary;
+el("filterAisle").onchange = renderLibrary;
+el("filterSide").onchange = renderLibrary;
+
+el("btnAddShelf").onclick = ()=>{
+  if(!working) return;
+  addShelf();
+};
+
+el("btnAddProduct").onclick = ()=> addProduct();
+el("btnBulkAdd").onclick = ()=> bulkAdd();
+
+el("btnSaveContinue").onclick = ()=>{
+  if(!working) return;
+  commitWorking();
+  toast("Saved");
+  // reload editor with fresh clone to avoid drift
+  showEditor(activeSegId);
+};
+el("btnSaveReturn").onclick = ()=>{
+  if(!working) return;
+  commitWorking();
+  toast("Saved");
+  backToLibrary();
+};
+el("btnDiscardReturn").onclick = ()=>{
+  if(!confirm("Discard all changes and return?")) return;
+  state.autosaveDraft = null;
+  dbSave(state);
+  toast("Discarded");
+  backToLibrary();
+};
+
+el("btnRemoveSegment").onclick = removeActiveSegment;
+
+el("btnPrintSegment").onclick = printSegment;
+el("btnPrintShelfReport").onclick = printShelfReport;
+
+function syncAnnotateButton(){
+  const on = !!(state.settings && state.settings.autoAnnotate);
+  el("btnToggleAnnotate").textContent = `Auto-Annotate: ${on ? "On" : "Off"}`;
+}
+el("btnToggleAnnotate").onclick = ()=>{
+  state.settings = state.settings || {};
+  state.settings.autoAnnotate = !state.settings.autoAnnotate;
+  dbSave(state);
+  syncAnnotateButton();
+  toast(`Auto-Annotate ${state.settings.autoAnnotate ? "enabled" : "disabled"}`);
+};
+el("btnExportCSV").onclick = exportCSV;
+
+/* =======================
+   Recover autosave draft
+   ======================= */
+function maybeRecover(){
+  if(state.autosaveDraft?.working){
+    const ok = confirm("Recovered draft available. Open it now?");
+    if(ok){
+      showEditor(state.autosaveDraft.segId);
+    } else {
+      // clear draft if user doesn't want it
+      state.autosaveDraft = null;
+      dbSave(state);
+    }
+  }
+}
+
+// init
+(async ()=>{
+  try{
+    vendorCatalogs = await vendorDBGetAll();
+    rebuildVendorIndex();
+  }catch{}
+  syncAnnotateButton();
+  renderLibrary();
+  if(IS_IPAD){
+    // Default iPad experience: open Floor Capture mode
+    openFloorMode();
+  } else {
+    maybeRecover();
+  }
+})();
+</script>
+</body>
+</html>
